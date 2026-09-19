@@ -1,0 +1,33 @@
+---
+import { t } from '../../lib/strings';
+import type { Typeface } from '../../content/profile';
+interface Props { typography: Typeface[]; }
+const { typography } = Astro.props;
+const pangram = 'Yxskaftbud, ge vår WC-zonmö IQ-hjälp.';
+---
+<section class="section" id="typography">
+  <div class="wrap">
+  <div class="section__head">
+    <h2 class="section__title" data-reveal>{t.sections.typography}</h2>
+  </div>
+
+  {typography.map((face) => (
+    <div class="type" data-reveal>
+      <div class="type__meta">
+        <span class="type__name">{face.name}</span>
+        {face.role && <span>{face.role}</span>}
+        {face.weights && <span>{face.weights}</span>}
+        {face.files && face.files.map((f) => (
+          <a class="btn btn--sm" href={f.href} download>{t.actions.download} {f.label}</a>
+        ))}
+      </div>
+      <p class="type__specimen" style={`font-family:${face.stack}`}>{face.specimen ?? pangram}</p>
+      <div class="type__scale" style={`font-family:${face.stack}`}>
+        <span style="font-size:2rem">Aa</span>
+        <span>ABCDEFGHIJKLM abcdefghijklm 0123456789 åäö</span>
+      </div>
+      {face.note && <p class="section__note">{face.note}</p>}
+    </div>
+  ))}
+  </div>
+</section>

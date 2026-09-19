@@ -1,0 +1,21 @@
+---
+import { t } from '../../lib/strings';
+import type { PlatformBlock } from '../../content/profile';
+interface Props { platform: PlatformBlock[]; }
+const { platform } = Astro.props;
+---
+<section class="section" id="plattform">
+  <div class="wrap">
+    <div class="section__head">
+      <h2 class="section__title" data-reveal>{t.sections.plattform}</h2>
+    </div>
+    <div class="platform">
+      {platform.map((b) => (
+        <div class="platform__block" data-reveal>
+          <h3 class="platform__title">{b.title}</h3>
+          <p class="platform__body">{b.body}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+</section>

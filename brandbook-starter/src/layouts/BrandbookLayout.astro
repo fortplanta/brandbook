@@ -1,0 +1,32 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+  accent?: string;
+}
+const { title, description = 'Digital brandbook.', accent } = Astro.props;
+---
+
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    {accent && <style is:inline set:html={`:root{--color-brand:${accent}}`} />}
+  </head>
+  <body>
+    <div class="shell">
+      <slot name="nav" />
+      <main class="content" id="top">
+        <slot />
+      </main>
+    </div>
+    <script src="../scripts/enhance.ts"></script>
+  </body>
+</html>

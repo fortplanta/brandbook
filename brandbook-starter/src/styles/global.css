@@ -1,0 +1,560 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   TOKENS — neutral chrome, single per-client accent used only inside content.
+   ========================================================================== */
+@theme {
+  --color-paper: #ffffff;
+  --color-sink: #f4f4f2;
+  --color-ink: #111113;
+  --color-muted: #6f6f75;
+  --color-line: #e7e7e3;
+  --color-brand: #3b49f0;   /* overridden per client via inline --color-brand */
+
+  --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --pad: clamp(1.25rem, 4vw, 4rem);
+  --gutter: clamp(1.25rem, 4vw, 3.5rem); /* one consistent section gutter */
+  --rail: 60px;             /* minimized drawer width */
+  --drawer: 250px;          /* expanded drawer width */
+  --drawer-x: clamp(1rem, 2.5vw, 1.5rem);  /* drawer inset from the edge */
+  --nav-pad: 0.8rem;        /* drawer inner padding */
+}
+
+* { box-sizing: border-box; }
+html { color-scheme: light; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  text-wrap: pretty;
+}
+h1, h2, h3 { letter-spacing: -0.02em; line-height: 1.02; margin: 0; text-wrap: balance; }
+a { color: inherit; }
+img, video { display: block; max-width: 100%; }
+
+/* ============================================================================
+   FULL-BLEED LAYOUT
+   Content spans the full width; text sits in a centred .wrap, media bleeds
+   edge to edge. On desktop the .wrap keeps a left safe-gutter so body text
+   never sits under the minimized drawer rail.
+   ========================================================================== */
+.content { width: 100%; }
+/* ONE consistent gutter for every section, so a heading and its media share a
+   single left edge. Text hugs the left (L-to-R reading); the right keeps
+   clearance for the drawer rail on desktop. .wrap is now a passthrough. */
+.wrap { width: 100%; }
+.section {
+  padding-block: clamp(2.75rem, 6vh, 5rem);
+  padding-inline: var(--gutter);
+  border-top: 1px solid var(--color-line);
+  scroll-margin-top: 1.5rem;
+}
+@media (min-width: 901px) {
+  .section { padding-right: max(var(--gutter), calc(var(--rail) + var(--drawer-x) + 1.25rem)); }
+}
+.section:first-child { border-top: 0; }
+.section__head { margin-bottom: 1.75rem; }
+.section__eyebrow { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-muted); margin: 0 0 0.6rem; }
+.section__title { font-size: clamp(1.7rem, 4.5vw, 2.9rem); }
+.section__note { color: var(--color-muted); max-width: 48ch; margin: 1rem 0 0; font-size: 1.05rem; line-height: 1.55; }
+
+/* Media grids now align to the section gutter like everything else. */
+.bleedgrid { padding-inline: 0; }
+
+/* ============================================================================
+   COVER — full-bleed hero
+   ========================================================================== */
+.cover {
+  min-height: 100svh;
+  display: flex; flex-direction: column; justify-content: center;
+  border-top: 0;
+  background:
+    radial-gradient(130% 90% at 100% 0%, color-mix(in oklab, var(--color-brand) 13%, transparent), transparent 55%),
+    radial-gradient(80% 60% at 0% 100%, color-mix(in oklab, var(--color-brand) 8%, transparent), transparent 60%);
+}
+.cover__title { font-size: clamp(3rem, 13vw, 9rem); line-height: 0.94; }
+.cover__tagline { font-size: clamp(1.2rem, 3vw, 2rem); color: var(--color-muted); margin: 1.5rem 0 0; max-width: 26ch; }
+.cover__note { margin-top: 2.5rem; max-width: 42ch; color: var(--color-muted); line-height: 1.5; }
+@media (min-width: 901px) {
+  /* keep the hero title clear of the expanded drawer at top-right */
+  .cover { padding-right: max(var(--gutter), calc(var(--drawer) + var(--drawer-x) + 2rem)); }
+}
+
+/* ============================================================================
+   FLOATING DRAWER
+   A glass panel detached from the edge. Expanded at the top of the page;
+   once scrolled in (JS sets [data-min]) it collapses to a slim rail of section
+   dots. Hover or keyboard focus peeks it back open. Active section is shown by
+   a filled + ringed dot AND a bold label (never colour alone).
+   ========================================================================== */
+.nav {
+  position: fixed;
+  top: var(--drawer-x); right: var(--drawer-x); left: auto;
+  width: var(--drawer);
+  max-height: calc(100svh - 2 * var(--drawer-x));
+  z-index: 50;
+  display: flex; flex-direction: column;
+  padding: var(--nav-pad);
+  border: 1px solid color-mix(in oklab, var(--color-ink) 10%, transparent);
+  border-radius: 16px;
+  /* Paper opacity high enough that ink text keeps AA contrast even over dark
+     full-bleed imagery (better-colors). */
+  background: color-mix(in oklab, var(--color-paper) 84%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  backdrop-filter: blur(20px) saturate(1.3);
+  box-shadow: 0 26px 70px -34px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  will-change: width;
+  /* premium drawer spring (Vaul / Sonner curve) — same 0.35s as the footer so
+     the whole panel narrows and shortens as ONE coordinated motion. */
+  transition: width 0.35s cubic-bezier(0.32, 0.72, 0, 1), padding 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.nav__id { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; }
+.nav__mark {
+  display: flex; flex: none;
+  width: 2rem; height: 2rem; border-radius: 9px;
+  background: var(--color-ink); color: var(--color-paper);
+  font-weight: 600; font-size: 0.95rem; align-items: center; justify-content: center;
+}
+.nav__idtext { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.nav__client { font-weight: 600; font-size: 1.02rem; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; }
+.nav__updated { font-size: 0.76rem; color: var(--color-muted); margin-top: 0.1rem; white-space: nowrap; }
+
+/* Search trigger — only meaningful with JS, so hidden until html.js. */
+.nav__search { display: none; }
+html.js .nav__search {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%;
+  margin-bottom: 0.85rem; padding: 0.5rem 0.6rem; border-radius: 9px;
+  font: inherit; font-size: 0.9rem; color: var(--color-muted);
+  background: var(--color-sink); border: 1px solid transparent; cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.13s cubic-bezier(0.16,1,0.3,1);
+}
+.nav__search-icon { flex: none; width: 15px; height: 15px; }
+.nav__search-label { flex: 1; text-align: left; white-space: nowrap; overflow: hidden;
+  transition: max-width 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease; max-width: 9rem; }
+.nav__search-kbd {
+  flex: none; font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-muted);
+  background: var(--color-paper); border: 1px solid var(--color-line); border-radius: 5px; padding: 0.05rem 0.3rem;
+  transition: max-width 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease; }
+@media (hover: hover) and (pointer: fine) { html.js .nav__search:hover { border-color: var(--color-line); color: var(--color-ink); } }
+@media (prefers-reduced-motion: no-preference) { html.js .nav__search:active { transform: scale(0.98); } }
+.nav__search:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+/* collapse to the icon in the minimized rail — transparent, like the dots */
+.nav[data-min]:not(:hover):not(:focus-within) .nav__search { justify-content: center; gap: 0; padding-inline: 0; background: transparent; }
+.nav[data-min]:not(:hover):not(:focus-within) .nav__search-label,
+.nav[data-min]:not(:hover):not(:focus-within) .nav__search-kbd {
+  max-width: 0; opacity: 0; overflow: hidden;
+  /* border-box padding+border have a floor that max-width:0 can't cross — zero
+     them so the kbd fully collapses and the icon stays centred in the rail. */
+  padding-inline: 0; border-inline-width: 0; margin: 0;
+}
+
+/* ---- Cmd+K command palette ---- */
+.cmdk { position: fixed; inset: 0; z-index: 100; display: flex; justify-content: center; align-items: flex-start; }
+.cmdk[hidden] { display: none; }
+.cmdk__backdrop { position: absolute; inset: 0; background: color-mix(in oklab, var(--color-ink) 28%, transparent); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+.cmdk__panel {
+  position: relative; margin-top: 12vh; width: min(90vw, 34rem); max-height: 66vh;
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--color-paper); border: 1px solid var(--color-line); border-radius: 16px;
+  box-shadow: 0 30px 80px -30px rgba(0,0,0,0.5);
+}
+@media (prefers-reduced-motion: no-preference) { .cmdk:not([hidden]) .cmdk__panel { animation: cmdk-in 0.22s cubic-bezier(0.32,0.72,0,1) both; } }
+@keyframes cmdk-in { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: none; } }
+.cmdk__inputrow { display: flex; align-items: center; gap: 0.65rem; padding: 0.9rem 1rem; border-bottom: 1px solid var(--color-line); }
+.cmdk__icon { flex: none; width: 18px; height: 18px; color: var(--color-muted); }
+.cmdk__input { flex: 1; font: inherit; font-size: 1rem; border: 0; outline: 0; background: none; color: var(--color-ink); }
+.cmdk__esc { flex: none; font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-muted); border: 1px solid var(--color-line); border-radius: 5px; padding: 0.1rem 0.35rem; }
+.cmdk__list { list-style: none; margin: 0; padding: 0.4rem; overflow-y: auto; }
+.cmdk__item { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0.7rem; border-radius: 10px; cursor: pointer; }
+.cmdk__item.is-active { background: var(--color-sink); }
+.cmdk__label { font-weight: 500; color: var(--color-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cmdk__meta { display: flex; align-items: center; gap: 0.5rem; flex: none; }
+.cmdk__hex { font-family: var(--font-mono); font-size: 0.78rem; color: var(--color-muted); }
+.cmdk__kind { font-size: 0.72rem; color: var(--color-muted); background: var(--color-sink); border: 1px solid var(--color-line); border-radius: 999px; padding: 0.15rem 0.5rem; white-space: nowrap; }
+.cmdk__item.is-active .cmdk__kind { background: var(--color-paper); }
+.cmdk__empty { margin: 0; padding: 1.25rem 1rem 1.5rem; text-align: center; color: var(--color-muted); font-size: 0.9rem; }
+
+/* transient highlight when search jumps to a target */
+.search-flash { animation: search-flash 1.2s ease; }
+@keyframes search-flash { 0%, 40% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 55%, transparent); } 100% { box-shadow: 0 0 0 3px transparent; } }
+@media (prefers-reduced-motion: reduce) { .search-flash { animation: none; } }
+
+.nav__panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.nav__scroll { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding-bottom: 1rem; }
+.nav__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.nav__link {
+  display: flex; align-items: center; gap: 0.65rem;
+  padding: 0.5rem 0.6rem; border-radius: 9px;
+  text-decoration: none; color: var(--color-muted); font-size: 0.95rem; font-weight: 500; white-space: nowrap;
+  transition: color 0.2s ease, background 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.nav__link::before {
+  content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid currentColor; background: transparent; opacity: 0.5;
+  transition: background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease,
+              transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1); /* back-out: a small pop */
+}
+@media (hover: hover) and (pointer: fine) {
+  .nav__link:hover { color: var(--color-ink); background: var(--color-sink); }
+}
+/* Fluid hover micro-interactions (motion-gated): the dot pops, the label leans in. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .nav__link:hover::before { transform: scale(1.5); opacity: 1; }
+  .nav__link:hover .nav__linklabel { transform: translateX(4px); }
+}
+.nav__link[aria-current="true"] { color: var(--color-ink); font-weight: 500; }
+.nav__link[aria-current="true"]::before {
+  background: var(--color-brand); border-color: var(--color-brand); opacity: 1;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 22%, transparent);
+}
+.nav__link:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.nav__linklabel { max-width: 8rem; overflow: hidden; }
+
+/* ---- Categories (accordion groups) ---- */
+.cat__head {
+  display: flex; align-items: center; gap: 0.65rem; width: 100%;
+  padding: 0.5rem 0.6rem; border-radius: 9px;
+  background: none; border: 0; font: inherit; font-size: 0.95rem; font-weight: 500;
+  color: var(--color-ink); text-align: left; white-space: nowrap; cursor: pointer;
+  transition: background 0.2s ease;
+}
+/* Group categories with spacing, not weight: whitespace separates one category
+   block from the next; heading (ink) vs items (muted) reads as one group. */
+.cat + .cat { margin-top: 0.55rem; }
+@media (hover: hover) and (pointer: fine) { .cat__head:not([aria-disabled]):hover { background: var(--color-sink); } }
+.cat__head:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.cat__dot {
+  flex: none; width: 7px; height: 7px; border-radius: 50%;
+  border: 1.5px solid var(--color-muted); background: transparent; opacity: 0.6;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+.cat__label { flex: 1; max-width: 9rem; overflow: hidden; transition: max-width 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease; }
+.cat__chev { flex: none; width: 15px; height: 15px; color: var(--color-muted); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease, max-width 0.35s ease; }
+.cat[data-open="true"] .cat__chev { transform: rotate(180deg); }
+.cat[data-active] .cat__dot { background: var(--color-brand); border-color: var(--color-brand); opacity: 1; box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 22%, transparent); }
+
+/* sub-list — content visible without JS; JS gates the measured-height collapse */
+.cat__list { overflow: hidden; }
+html.js .cat__list { height: 0; transition: height 0.35s cubic-bezier(0.32,0.72,0,1); }
+html.js .cat[data-open="true"] .cat__list { height: var(--cat-h, auto); }
+/* During first paint the categories are collapsed to their JS baseline; suppress
+   the transition so nothing animates shut on load. */
+.nav--boot .cat__list { transition: none !important; }
+.cat__list ul { list-style: none; margin: 0; padding: 0.1rem 0 0.5rem; display: flex; flex-direction: column; gap: 0.1rem; }
+.cat__list .nav__link { padding-left: 1.65rem; position: relative; }
+.cat__list .nav__link::before { display: none; }  /* the category owns the dot */
+.cat__list .nav__link[aria-current="true"]::after {
+  content: ""; position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--color-brand);
+}
+
+/* locked / teaser category — greyed, non-interactive upsell cue */
+.cat--locked .cat__head { color: var(--color-muted); cursor: default; opacity: 0.72; }
+.cat--locked .cat__dot { opacity: 0.35; }
+.cat__hint { font-size: 0.68rem; color: var(--color-muted); margin-left: auto; white-space: nowrap; transition: opacity 0.3s ease, max-width 0.35s ease; }
+.cat__lock { flex: none; width: 13px; height: 13px; color: var(--color-muted); opacity: 0.7; transition: opacity 0.3s ease, max-width 0.35s ease; }
+
+/* Footer (download buttons + credit): height-collapses to nothing when the rail
+   is minimized (grid-rows 0fr↔1fr) and eases back in on open — no dead space. */
+/* Collapses from a REAL measured height (enhance.ts sets --foot-h) rather than a
+   max-height overshoot, so the motion is evenly paced. Height and opacity share
+   the same duration/curve so content and space leave together — one motion. */
+.nav__foot { overflow: hidden; height: var(--foot-h, 7rem); transition: height 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
+.nav__foot-inner { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--color-line); }
+.nav__actions { display: flex; flex-direction: column; gap: 0.5rem; }
+.nav__made { font-size: 0.76rem; color: var(--color-muted); margin: 0; white-space: nowrap; }
+.nav__made a { color: var(--color-ink); text-underline-offset: 2px; }
+.nav__foot-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 0.25rem; }
+
+/* Changelog disclosure — the "living document" cue. Native <details>, works
+   without JS; the footer re-measures its height when it opens (--foot-h). */
+.changelog { font-size: 0.76rem; }
+.changelog__summary {
+  display: flex; align-items: center; gap: 0.45rem; list-style: none; cursor: pointer;
+  color: var(--color-muted); padding: 0.3rem 0; border-radius: 6px;
+  transition: color 0.15s ease;
+}
+.changelog__summary::-webkit-details-marker { display: none; }
+.changelog__summary:hover { color: var(--color-ink); }
+.changelog__summary:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.changelog__icon { flex: none; width: 13px; height: 13px; }
+.changelog__summary span { flex: 1; }
+.changelog__chev { flex: none; width: 13px; height: 13px; transition: transform 0.25s cubic-bezier(0.32,0.72,0,1); }
+.changelog[open] .changelog__chev { transform: rotate(180deg); }
+.changelog__list { list-style: none; margin: 0.35rem 0 0.15rem; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; max-height: 40vh; overflow-y: auto; }
+.changelog__item { display: flex; flex-direction: column; gap: 0.1rem; padding-left: 0.75rem; position: relative; }
+.changelog__item::before { content: ""; position: absolute; left: 0; top: 0.35rem; width: 5px; height: 5px; border-radius: 50%; background: var(--color-line); }
+.changelog__item:first-child::before { background: var(--color-brand); }
+.changelog__date { font-family: var(--font-mono); font-size: 0.7rem; color: var(--color-muted); }
+.changelog__note { color: var(--color-ink); line-height: 1.4; }
+.nav__sound { display: inline-flex; align-items: center; gap: 0.4rem; font: inherit; font-size: 0.76rem; color: var(--color-muted); background: none; border: 0; cursor: pointer; padding: 0.15rem 0; }
+.nav__sound:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: 4px; }
+.nav__sound-icon { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid currentColor; transition: background 0.15s ease; }
+.nav__sound[data-on="true"] .nav__sound-icon { background: var(--color-brand); border-color: var(--color-brand); }
+.nav__sound[data-on="false"] .nav__sound-label { text-decoration: line-through; opacity: 0.7; }
+
+/* Labels + id text collapse their WIDTH (not just fade), so dots/mark can centre. */
+.nav__idtext, .nav__linklabel { transition: max-width 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
+.nav__linklabel { transition: max-width 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1), transform 0.3s cubic-bezier(0.32, 0.72, 0, 1); }
+
+/* --- Minimized rail --- */
+.nav[data-min]:not(:hover):not(:focus-within) { width: var(--rail); padding: var(--nav-pad) 0; }
+.nav[data-min]:not(:hover):not(:focus-within) .nav__id { justify-content: center; gap: 0; margin-bottom: 1rem; }
+.nav[data-min]:not(:hover):not(:focus-within) .nav__idtext { max-width: 0; opacity: 0; }
+/* Collapsed rail: only the category dots remain, centred. Sub-lists hide. */
+.nav[data-min]:not(:hover):not(:focus-within) .cat__head { justify-content: center; gap: 0; padding-inline: 0; }
+.nav[data-min]:not(:hover):not(:focus-within) .cat__label,
+.nav[data-min]:not(:hover):not(:focus-within) .cat__chev,
+.nav[data-min]:not(:hover):not(:focus-within) .cat__hint,
+.nav[data-min]:not(:hover):not(:focus-within) .cat__lock { max-width: 0; opacity: 0; overflow: hidden; }
+/* The locked category's hint keeps margin-left:auto in the expanded drawer; zero
+   it in the rail so the collapsed dot centres instead of being shoved left. */
+.nav[data-min]:not(:hover):not(:focus-within) .cat__hint { margin-left: 0; }
+html.js .nav[data-min]:not(:hover):not(:focus-within) .cat__list { height: 0 !important; }
+.nav[data-min]:not(:hover):not(:focus-within) .nav__foot { height: 0; opacity: 0; pointer-events: none; }
+.nav[data-min]:not(:hover):not(:focus-within) .nav__scroll { padding-bottom: 0; } /* no dead space in the rail */
+
+@media (prefers-reduced-motion: reduce) {
+  .nav, .nav__idtext, .nav__linklabel, .nav__foot,
+  .cat__label, .cat__chev, .cat__hint, .cat__lock, html.js .cat__list { transition: none; }
+}
+
+/* ============================================================================
+   MOBILE — drawer becomes a top bar + slide-in
+   ========================================================================== */
+.nav__toggle { display: none; font: inherit; font-size: 0.9rem; background: none; border: 1px solid var(--color-line); border-radius: 8px; padding: 0.35rem 0.7rem; cursor: pointer; }
+@media (max-width: 900px) {
+  .nav {
+    inset: 0 0 auto 0; top: 0; left: 0; width: 100%; max-height: none; border-radius: 0;
+    flex-direction: row; align-items: center; justify-content: space-between;
+    padding: 0.8rem var(--pad); border: 0; border-bottom: 1px solid var(--color-line);
+    transition: none;
+  }
+  .nav[data-min]:not(:hover):not(:focus-within) { width: 100%; padding: 0.8rem var(--pad); }
+  .nav__id { margin-bottom: 0; }
+  .nav__mark { display: none !important; }
+  .nav__toggle { display: inline-flex; }
+  /* The whole panel (list + footer) is the slide-in on mobile. */
+  .nav__panel { display: none; position: fixed; inset: 3.4rem 0 0 0; background: var(--color-paper); padding: 1.25rem var(--pad); overflow-y: auto; }
+  .nav[data-open="true"] .nav__panel { display: flex; }
+  .nav__scroll { flex: 0 1 auto; overflow: visible; }
+  /* Everything is always expanded on mobile — no rail collapse. */
+  .nav[data-min]:not(:hover):not(:focus-within) .nav__idtext,
+  .nav[data-min]:not(:hover):not(:focus-within) .nav__linklabel { max-width: none !important; opacity: 1 !important; }
+  .nav[data-min]:not(:hover):not(:focus-within) .nav__foot { height: auto !important; opacity: 1 !important; pointer-events: auto !important; }
+  .nav__foot { height: auto; }
+  /* categories: all expanded, full labels, no rail collapse on mobile */
+  .nav[data-min]:not(:hover):not(:focus-within) .cat__label,
+  .nav[data-min]:not(:hover):not(:focus-within) .cat__chev,
+  .nav[data-min]:not(:hover):not(:focus-within) .cat__hint,
+  .nav[data-min]:not(:hover):not(:focus-within) .cat__lock { max-width: none !important; opacity: 1 !important; }
+  .nav[data-min]:not(:hover):not(:focus-within) .cat__head { justify-content: flex-start; gap: 0.65rem; padding-inline: 0.6rem; }
+  html.js .cat__list { height: auto !important; }
+  .nav[data-min]:not(:hover):not(:focus-within) .nav__link { justify-content: flex-start; gap: 0.65rem; padding-inline: 0.6rem; }
+}
+
+/* ============================================================================
+   BUTTONS
+   ========================================================================== */
+.btn {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  font: inherit; font-size: 0.9rem; text-decoration: none;
+  padding: 0.55rem 0.9rem; border-radius: 8px;
+  border: 1px solid var(--color-line); background: var(--color-paper); color: var(--color-ink);
+  cursor: pointer;
+  /* All motion is transform/opacity/shadow — never a property that reflows, so
+     the press and hover never shift layout (Emil design-eng). */
+  transition: border-color 0.15s ease, background 0.15s ease,
+              transform 0.13s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+}
+@media (hover: hover) and (pointer: fine) { .btn:hover { border-color: var(--color-ink); } }
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 5px 16px -8px rgba(0, 0, 0, 0.3); }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .btn:active { transform: translateY(0) scale(0.96); transition-duration: 0.06s; } /* tactile press */
+}
+.btn:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+.btn--solid { background: var(--color-ink); color: var(--color-paper); border-color: var(--color-ink); }
+.btn--sm { padding: 0.35rem 0.6rem; font-size: 0.82rem; }
+
+/* Press feedback on the other interactive controls too (transform only). */
+@media (prefers-reduced-motion: no-preference) {
+  .swatch { transition: transform 0.13s cubic-bezier(0.16, 1, 0.3, 1); }
+  .swatch:active { transform: scale(0.985); }
+  .nav__sound, .nav__toggle { transition: transform 0.13s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.15s ease; }
+  .nav__sound:active, .nav__toggle:active { transform: scale(0.94); }
+}
+
+/* ============================================================================
+   LOGOS
+   ========================================================================== */
+.logos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); gap: 1rem; }
+.logo { border: 1px solid var(--color-line); border-radius: 14px; overflow: hidden; }
+.logo__stage { display: grid; place-items: center; min-height: 260px; padding: 2.5rem; background: var(--color-sink); }
+.logo__stage--dark { background: var(--color-ink); }
+.logo__stage img { max-height: 130px; max-width: 78%; }
+.logo__foot { padding: 1rem 1.15rem; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; }
+.logo__name { font-weight: 550; }
+.logo__note { color: var(--color-muted); font-size: 0.9rem; flex-basis: 100%; margin: 0.15rem 0 0.5rem; line-height: 1.45; }
+.logo__files { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* ============================================================================
+   COLOURS — full-bleed band of tall swatches
+   ========================================================================== */
+.colors { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); gap: 0; border: 1px solid var(--color-line); border-radius: 16px; overflow: hidden; }
+.swatch { display: flex; flex-direction: column; text-align: left; background: none; cursor: pointer; font: inherit; padding: 0; border: 0; border-right: 1px solid var(--color-line); border-bottom: 1px solid var(--color-line); }
+.swatch:focus-visible { outline: 2px solid var(--color-brand); outline-offset: -2px; z-index: 1; }
+.swatch__chip { display: block; height: clamp(150px, 22vh, 220px); }  /* block so height applies (spans ignore it) */
+.swatch__body { position: relative; display: flex; flex-direction: column; gap: 0.5rem; padding: 1rem 1.1rem 1.25rem; }
+.swatch__name { display: block; font-weight: 600; }
+.swatch__role { display: block; font-size: 0.75rem; font-weight: 400; color: var(--color-muted); margin-top: 0.1rem; }
+.swatch__spec { display: block; font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-muted); line-height: 1.7; }
+.swatch__copied { color: var(--color-brand); }
+/* Copy affordance — a small icon that says "you can copy this". Brightens on
+   hover, flips to a check for a beat after copying. */
+.swatch__copy { position: absolute; top: 1rem; right: 1rem; width: 15px; height: 15px; color: var(--color-muted); opacity: 0.5; transition: opacity 0.2s ease, color 0.2s ease, transform 0.15s cubic-bezier(0.16, 1, 0.3, 1); }
+.swatch__copy svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.swatch__copy .i-check { opacity: 0; transform: scale(0.6); transition: opacity 0.15s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@media (hover: hover) and (pointer: fine) { .swatch:hover .swatch__copy { opacity: 1; } }
+.swatch.is-copied .swatch__copy { color: var(--color-brand); opacity: 1; }
+.swatch.is-copied .i-copy { opacity: 0; }
+.swatch.is-copied .i-check { opacity: 1; transform: scale(1); }
+
+/* Contrast readout — build-time WCAG guidance, two compact badges per swatch. */
+.swatch__contrast { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.15rem; }
+.cbadge {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  font-size: 0.68rem; line-height: 1; color: var(--color-muted);
+  padding: 0.28rem 0.45rem; border-radius: 999px; border: 1px solid var(--color-line);
+  white-space: nowrap;
+}
+.cbadge__k { font-weight: 600; letter-spacing: 0.01em; color: var(--color-ink); }
+.cbadge__swatch {
+  display: inline-grid; place-items: center; width: 15px; height: 15px; border-radius: 4px;
+  font-size: 0.6rem; font-weight: 600; border: 1px solid color-mix(in oklab, var(--color-ink) 12%, transparent);
+}
+/* rating tint — quiet, not alarmist; low contrast gets an amber cue */
+.cbadge--AAA .cbadge__k, .cbadge--AA .cbadge__k { color: #1f9d57; }
+.cbadge--low { border-color: color-mix(in oklab, #c8452f 35%, var(--color-line)); }
+.cbadge--low .cbadge__k { color: #c8452f; }
+
+/* Design-tokens export bar */
+.tokens {
+  margin-top: 1.25rem; padding: 1rem 1.15rem; border: 1px solid var(--color-line); border-radius: 14px;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem;
+}
+.tokens__head { display: flex; flex-direction: column; gap: 0.2rem; min-width: 12rem; flex: 1; }
+.tokens__label { font-weight: 550; font-size: 0.95rem; }
+.tokens__hint { color: var(--color-muted); font-size: 0.85rem; line-height: 1.4; }
+.tokens__btns { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+/* Fixed width so the label→"Kopierat" swap causes no layout shift. */
+.tokens__btns .btn { min-width: 6rem; justify-content: center; }
+.btn.is-copied { border-color: var(--color-brand); color: var(--color-brand); }
+
+/* ============================================================================
+   TYPOGRAPHY
+   ========================================================================== */
+.type { border-top: 1px solid var(--color-line); padding: 2.5rem 0; }
+.type:first-of-type { border-top: 0; padding-top: 0; }
+.type__meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; align-items: baseline; color: var(--color-muted); font-size: 0.9rem; }
+.type__name { font-weight: 600; color: var(--color-ink); font-size: 1.15rem; }
+.type__specimen { font-size: clamp(2.25rem, 7vw, 5rem); line-height: 1.0; letter-spacing: -0.02em; margin: 1.25rem 0 0; }
+.type__scale { color: var(--color-muted); margin-top: 1rem; display: flex; flex-wrap: wrap; gap: 0.35rem 1.5rem; font-size: 0.95rem; align-items: baseline; }
+
+/* ============================================================================
+   IMAGERY (bildspråk) — full-bleed grid
+   ========================================================================== */
+.imagery { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); gap: clamp(0.4rem, 1vw, 0.9rem); }
+.imagery figure { margin: 0; }
+.imagery__frame { overflow: hidden; aspect-ratio: 4 / 3; background: var(--color-sink); }
+.imagery__frame img { width: 100%; height: 100%; object-fit: cover; }
+.imagery figcaption { font-size: 0.85rem; color: var(--color-muted); margin-top: 0.5rem; padding-inline: 0.25rem; }
+
+/* ============================================================================
+   MOTION (rörligt) — the edge over a PDF, full-bleed
+   ========================================================================== */
+.motion { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 32rem), 1fr)); gap: clamp(0.5rem, 1.2vw, 1.25rem); }
+.motion figure { margin: 0; }
+.motion__frame { overflow: hidden; background: var(--color-ink); border-radius: 6px; }
+.motion__frame video { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; background: var(--color-ink); }
+.motion__cap { font-size: 0.9rem; color: var(--color-muted); margin-top: 0.6rem; padding-inline: 0.25rem; }
+.motion__cap strong { color: var(--color-ink); font-weight: 550; }
+
+/* ============================================================================
+   DOWNLOADS
+   ========================================================================== */
+.dl-group { border-top: 1px solid var(--color-line); padding: 1.25rem 0; }
+.dl-group:first-of-type { border-top: 0; }
+.dl-group__title { font-size: 1rem; font-weight: 600; color: var(--color-ink); margin: 0 0 0.75rem; }
+.dl-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.6rem 0; border-bottom: 1px solid var(--color-line); }
+.dl-row:last-child { border-bottom: 0; }
+.dl-row__label { display: flex; align-items: baseline; gap: 0.75rem; }
+.dl-row__size { color: var(--color-muted); font-size: 0.85rem; font-family: var(--font-mono); }
+
+/* ============================================================================
+   GUIDELINES
+   ========================================================================== */
+.guides { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); gap: 1.5rem 3rem; }
+.guide h3 { font-size: 1.15rem; margin-bottom: 0.5rem; }
+.guide p { color: var(--color-muted); line-height: 1.55; margin: 0; }
+
+/* ============================================================================
+   PLATFORM (Kärnan)
+   ========================================================================== */
+.platform { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1.75rem 3rem; }
+.platform__title { font-size: 1.1rem; margin: 0 0 0.5rem; }
+.platform__body { color: var(--color-muted); line-height: 1.55; margin: 0; max-width: 42ch; }
+
+/* ============================================================================
+   TONE OF VOICE (Röst)
+   ========================================================================== */
+.tone { display: flex; flex-direction: column; gap: 2.5rem; }
+.tone__name { font-size: clamp(1.25rem, 2.6vw, 1.7rem); margin: 0 0 0.4rem; }
+.tone__desc { color: var(--color-muted); max-width: 54ch; margin: 0 0 1.1rem; line-height: 1.5; }
+.tone__examples { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: 1rem; }
+.tone__ex { border: 1px solid var(--color-line); border-left-width: 3px; border-radius: 10px; padding: 1rem 1.15rem; }
+.tone__ex p { margin: 0.4rem 0 0; line-height: 1.5; }
+.tone__ex--do { border-left-color: #1f9d57; }
+.tone__ex--dont { border-left-color: #c8452f; }
+.tone__tag { font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-muted); font-weight: 600; }
+.tone__ex--do .tone__tag { color: #1f9d57; }
+.tone__ex--dont .tone__tag { color: #c8452f; }
+.tone__boiler { margin-top: 0.5rem; border: 1px solid var(--color-line); border-radius: 12px; padding: 1.25rem 1.4rem; max-width: 48rem; }
+.tone__boiler-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 0.6rem; }
+.tone__boiler p { margin: 0; line-height: 1.6; }
+
+/* ============================================================================
+   SCROLL REVEAL
+   ========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    [data-reveal] { animation: reveal-in linear both; animation-timeline: view(); animation-range: entry 2% cover 16%; }
+  }
+  @supports not (animation-timeline: view()) {
+    html.js [data-reveal] { opacity: 0; transform: translateY(1rem); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16,1,0.3,1); }
+    html.js [data-reveal].is-visible { opacity: 1; transform: none; }
+  }
+}
+@keyframes reveal-in { from { opacity: 0; transform: translateY(1.25rem); } to { opacity: 1; transform: none; } }
+
+/* ============================================================================
+   PRINT
+   ========================================================================== */
+@media print {
+  .nav, .btn, .no-print { display: none !important; }
+  .content, .wrap { margin: 0; max-width: none; padding: 0 1.5cm; }
+  .section { border-top: 1px solid #ddd; break-inside: avoid; padding-block: 1.2cm; }
+  .cover { min-height: auto; }
+  .logo, .swatch, .imagery__frame, .motion__frame { break-inside: avoid; }
+  .motion { display: none; }
+  a[href]::after { content: ""; }
+  body { background: #fff; }
+}

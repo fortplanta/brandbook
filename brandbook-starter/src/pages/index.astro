@@ -1,0 +1,74 @@
+---
+import BrandbookLayout from '../layouts/BrandbookLayout.astro';
+import SideNav from '../components/SideNav.astro';
+import Cover from '../components/sections/Cover.astro';
+import Platform from '../components/sections/Platform.astro';
+import Tone from '../components/sections/Tone.astro';
+import Logos from '../components/sections/Logos.astro';
+import Colors from '../components/sections/Colors.astro';
+import Typography from '../components/sections/Typography.astro';
+import Imagery from '../components/sections/Imagery.astro';
+import Motion from '../components/sections/Motion.astro';
+import Downloads from '../components/sections/Downloads.astro';
+import { categories } from '../content/categories';
+import { loadProfile } from '../lib/loadProfile';
+import { t } from '../lib/strings';
+
+// Content source: local file, or the CMS when PAYLOAD_URL is set. Same shape.
+const profile = await loadProfile();
+
+// Which sections actually have content?
+const has: Record<string, boolean> = {
+  plattform: (profile.platform?.length ?? 0) > 0,
+  tonalitet: (profile.tone?.principles?.length ?? 0) > 0,
+  logos: profile.logos?.length > 0,
+  colors: profile.colors?.length > 0,
+  typography: profile.typography?.length > 0,
+  imagery: (profile.imagery?.images?.length ?? 0) > 0,
+  motion: profile.motion?.length > 0,
+  downloads: profile.downloads?.length > 0,
+};
+
+// Build the sidebar model: keep locked categories (teasers); for active ones,
+// keep only sections that have content, and drop the category if it ends up empty.
+const nav = categories
+  .map((cat) => {
+    if (cat.locked) return { id: cat.id, label: cat.label, locked: true, items: [] };
+    const items = (cat.sections ?? [])
+      .filter((id) => has[id])
+      .map((id) => ({ id, label: t.sections[id] }));
+    return { id: cat.id, label: cat.label, items };
+  })
+  .filter((cat) => cat.locked || cat.items.length > 0);
+
+// The ordered list of active sections to render in the page.
+const activeSections = categories
+  .filter((c) => !c.locked)
+  .flatMap((c) => (c.sections ?? []).filter((id) => has[id]));
+---
+
+<BrandbookLayout title={`${profile.client} — Brandbook`} description={profile.tagline} accent={profile.accent}>
+  <SideNav
+    slot="nav"
+    client={profile.client}
+    updated={profile.updated}
+    nav={nav}
+    downloadAllHref={profile.downloadAllHref}
+    changelog={profile.changelog}
+  />
+
+  <Cover client={profile.client} tagline={profile.tagline} note={profile.cover?.note} />
+
+  {activeSections.map((id) => (
+    <>
+      {id === 'plattform' && <Platform platform={profile.platform} />}
+      {id === 'tonalitet' && profile.tone && <Tone tone={profile.tone} />}
+      {id === 'logos' && <Logos logos={profile.logos} />}
+      {id === 'colors' && <Colors colors={profile.colors} typography={profile.typography} />}
+      {id === 'typography' && <Typography typography={profile.typography} />}
+      {id === 'imagery' && <Imagery note={profile.imagery.note} images={profile.imagery.images} />}
+      {id === 'motion' && <Motion motion={profile.motion} />}
+      {id === 'downloads' && <Downloads downloads={profile.downloads} downloadAllHref={profile.downloadAllHref} />}
+    </>
+  ))}
+</BrandbookLayout>

@@ -1,0 +1,22 @@
+# Netlify config for the STATIC brandbook site (brandbook-starter).
+# The CMS (brandbook-cms) is NOT deployed here — it needs a persistent
+# server + database + object storage (Render / Railway / Fly / a VPS).
+[build]
+  base = "brandbook-starter"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# To build a client's book from the CMS instead of the local profile.ts,
+# set these in Netlify → Site settings → Environment variables:
+#   PAYLOAD_URL = https://your-cms-host      (where the CMS is deployed)
+#   CLIENT_SLUG = tangent                     (which client to build)
+# With neither set, the site builds from the committed sample (Tangent).
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

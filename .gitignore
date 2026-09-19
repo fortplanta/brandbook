@@ -1,0 +1,25 @@
+# deps / builds / caches
+node_modules/
+dist/
+.astro/
+.next/
+.output/
+.vercel/
+.netlify/
+
+# CMS local data (never commit)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+brandbook-cms/media/
+payload-types.ts
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# os / editor
+.DS_Store
+*.log

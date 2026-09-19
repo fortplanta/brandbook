@@ -1,0 +1,51 @@
+---
+import { t } from '../../lib/strings';
+import type { Tone } from '../../content/profile';
+interface Props { tone: Tone; }
+const { tone } = Astro.props;
+---
+<section class="section" id="tonalitet">
+  <div class="wrap">
+    <div class="section__head">
+      <h2 class="section__title" data-reveal>{t.sections.tonalitet}</h2>
+      {tone.intro && <p class="section__note">{tone.intro}</p>}
+    </div>
+
+    <div class="tone">
+      {tone.principles.map((pr) => (
+        <div class="tone__principle" data-reveal>
+          <h3 class="tone__name">{pr.name}</h3>
+          <p class="tone__desc">{pr.description}</p>
+          {(pr.do || pr.dont) && (
+            <div class="tone__examples">
+              {pr.do && (
+                <div class="tone__ex tone__ex--do">
+                  <span class="tone__tag">Gör så här</span>
+                  <p>{pr.do}</p>
+                </div>
+              )}
+              {pr.dont && (
+                <div class="tone__ex tone__ex--dont">
+                  <span class="tone__tag">Inte så här</span>
+                  <p>{pr.dont}</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+
+    {tone.boilerplate && (
+      <div class="tone__boiler" data-reveal>
+        <div class="tone__boiler-head">
+          <span class="tone__tag">Standardtext</span>
+          <button class="btn btn--sm" type="button" data-copy={tone.boilerplate}>
+            <span data-copy-label>{t.actions.copy}</span>
+          </button>
+        </div>
+        <p>{tone.boilerplate}</p>
+      </div>
+    )}
+  </div>
+</section>

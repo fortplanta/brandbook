@@ -1,0 +1,32 @@
+---
+import { t } from '../../lib/strings';
+import type { Logo } from '../../content/profile';
+interface Props { logos: Logo[]; }
+const { logos } = Astro.props;
+---
+<section class="section" id="logos">
+  <div class="wrap">
+  <div class="section__head">
+    <h2 class="section__title" data-reveal>{t.sections.logos}</h2>
+  </div>
+
+  <div class="logos">
+    {logos.map((logo) => (
+      <div class="logo" data-reveal>
+        <div class:list={['logo__stage', { 'logo__stage--dark': logo.onDark }]}>
+          <img src={logo.image} alt={`${logo.name}`} />
+        </div>
+        <div class="logo__foot">
+          <span class="logo__name">{logo.name}</span>
+          {logo.note && <p class="logo__note">{logo.note}</p>}
+          <div class="logo__files">
+            {logo.files.map((f) => (
+              <a class="btn btn--sm" href={f.href} download>{t.actions.download} {f.label}</a>
+            ))}
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+  </div>
+</section>

@@ -1,0 +1,107 @@
+---
+import { t } from '../lib/strings';
+import type { ChangeEntry } from '../content/profile';
+
+interface NavItem { id: string; label: string; }
+interface NavCat { id: string; label: string; locked?: boolean; items: NavItem[]; }
+interface Props {
+  client: string;
+  updated?: string;
+  nav: NavCat[];
+  downloadAllHref?: string;
+  changelog?: ChangeEntry[];
+}
+const { client, updated, nav, downloadAllHref, changelog } = Astro.props;
+const initial = client.trim().charAt(0).toUpperCase();
+---
+
+<nav class="nav" data-nav data-open="false" aria-label="Brandbook">
+  <div class="nav__id">
+    <span class="nav__mark" aria-hidden="true">{initial}</span>
+    <span class="nav__idtext">
+      <a href="#top" class="nav__client">{client}</a>
+      {updated && <span class="nav__updated">{t.meta.updated} {updated}</span>}
+    </span>
+  </div>
+
+  <button class="nav__search" type="button" data-search-open aria-label={t.search.open}>
+    <svg class="nav__search-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+    <span class="nav__search-label">{t.search.open}</span>
+    <kbd class="nav__search-kbd" aria-hidden="true">⌘K</kbd>
+  </button>
+
+  <button class="nav__toggle" data-nav-toggle type="button" aria-expanded="false">{t.actions.menu}</button>
+
+  <div class="nav__panel">
+    <div class="nav__scroll">
+      {nav.map((cat) => (
+        <div class:list={['cat', { 'cat--locked': cat.locked }]} data-cat={cat.id} data-open={cat.locked ? undefined : 'true'}>
+          {cat.locked ? (
+            <div class="cat__head" aria-disabled="true" title={t.locked.aria}>
+              <span class="cat__dot" aria-hidden="true"></span>
+              <span class="cat__label">{cat.label}</span>
+              <span class="cat__hint">{t.locked.hint}</span>
+              <svg class="cat__lock" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+            </div>
+          ) : (
+            <button class="cat__head" type="button" data-cat-toggle aria-expanded="true">
+              <span class="cat__dot" aria-hidden="true"></span>
+              <span class="cat__label">{cat.label}</span>
+              <svg class="cat__chev" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          )}
+
+          {!cat.locked && (
+            <div class="cat__list">
+              <ul>
+                {cat.items.map((it) => (
+                  <li>
+                    <a class="nav__link" href={`#${it.id}`} data-nav-link={it.id}>
+                      <span class="nav__linklabel">{it.label}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+
+    <div class="nav__foot">
+      <div class="nav__foot-inner">
+        <div class="nav__actions">
+          {downloadAllHref && (
+            <a class="btn btn--solid" href={downloadAllHref} download>{t.actions.downloadAll}</a>
+          )}
+          <button class="btn" type="button" data-print>{t.actions.downloadPdf}</button>
+        </div>
+
+        {changelog && changelog.length > 0 && (
+          <details class="changelog">
+            <summary class="changelog__summary">
+              <svg class="changelog__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
+              <span>{t.changelog.toggle}</span>
+              <svg class="changelog__chev" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            </summary>
+            <ul class="changelog__list">
+              {changelog.map((c) => (
+                <li class="changelog__item">
+                  <span class="changelog__date">{c.date}</span>
+                  <span class="changelog__note">{c.note}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
+        <div class="nav__foot-row">
+          <p class="nav__made">Skapad av <a href="https://ohmy.se" target="_blank" rel="noopener">Oh My</a></p>
+          <button class="nav__sound" type="button" data-sound-toggle aria-pressed="true" title="Ljudeffekter">
+            <span class="nav__sound-icon" aria-hidden="true"></span>
+            <span class="nav__sound-label">Ljud</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>

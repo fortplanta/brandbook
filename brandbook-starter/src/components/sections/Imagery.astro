@@ -1,0 +1,23 @@
+---
+import { t } from '../../lib/strings';
+import type { ImageItem } from '../../content/profile';
+interface Props { note?: string; images: ImageItem[]; }
+const { note, images } = Astro.props;
+---
+<section class="section" id="imagery">
+  <div class="wrap">
+    <div class="section__head">
+      <h2 class="section__title" data-reveal>{t.sections.imagery}</h2>
+      {note && <p class="section__note">{note}</p>}
+    </div>
+  </div>
+
+  <div class="imagery bleedgrid">
+    {images.map((img) => (
+      <figure data-reveal>
+        <div class="imagery__frame"><img src={img.src} alt={img.caption ?? ''} loading="lazy" /></div>
+        {img.caption && <figcaption>{img.caption}</figcaption>}
+      </figure>
+    ))}
+  </div>
+</section>

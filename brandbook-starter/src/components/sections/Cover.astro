@@ -1,0 +1,11 @@
+---
+interface Props { client: string; tagline?: string; note?: string; }
+const { client, tagline, note } = Astro.props;
+---
+<section class="section cover" id="cover">
+  <div class="wrap">
+    <h1 class="cover__title" data-reveal>{client}</h1>
+    {tagline && <p class="cover__tagline" data-reveal>{tagline}</p>}
+    {note && <p class="cover__note" data-reveal>{note}</p>}
+  </div>
+</section>

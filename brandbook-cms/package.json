@@ -1,0 +1,33 @@
+{
+  "name": "brandbook-cms",
+  "version": "1.0.0",
+  "description": "Self-hosted Payload CMS for the brandbook starter — per-client editors, media library, free (MIT).",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "tsx seed.ts",
+    "serve:rest": "tsx serve.ts",
+    "generate:types": "payload generate:types",
+    "generate:importmap": "payload generate:importmap"
+  },
+  "dependencies": {
+    "@payloadcms/db-sqlite": "^3.89.0",
+    "@payloadcms/next": "^3.89.0",
+    "@payloadcms/richtext-lexical": "^3.89.0",
+    "graphql": "^16.9.0",
+    "next": "^15.5.0",
+    "payload": "^3.89.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "sharp": "^0.35.4"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "tsx": "^4.23.13",
+    "typescript": "^5.7.0"
+  },
+  "engines": { "node": ">=20.9.0" }
+}
