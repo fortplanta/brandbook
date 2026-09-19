@@ -73,7 +73,7 @@ export { categories, type NavCategory } from './categories';
 export const profile: Profile = {
   client: 'Tangent Technologies',
   tagline: 'We partner with companies to optimize operational execution using our purpose-built agentic platform.',
-  updated: '2026-09-17',
+  updated: '2026-09-19',
   accent: '#0B78DE',
   cover: {
     note: 'The whole Tangent brand in one place — logo, colours, type and files. Share the link internally; everyone works from the same source, always the latest version.',
@@ -148,6 +148,7 @@ export const profile: Profile = {
   ],
 
   changelog: [
+    { date: '2026-09-19', note: 'Live stress-test — this line was edited, rebuilt and pushed to the live page to prove the update loop.' },
     { date: '2026-09-17', note: 'Brand imported from Figma — palette, General Sans and positioning copy.' },
     { date: '2026-09-17', note: 'Logo and imagery are placeholders pending real asset exports.' },
   ],
