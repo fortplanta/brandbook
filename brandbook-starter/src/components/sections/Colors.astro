@@ -12,54 +12,55 @@ const contrast = colors.map((c) => swatchContrast(c.hex, paper));
 const tokens = buildTokens(colors, typography);
 
 const ratingLabel = (r: string) => (r === 'low' ? t.contrast.fail : r);
+const fg = (i: number) => (contrast[i].bestText.color === 'dark' ? '#111113' : '#ffffff');
+const pad = (n: number) => String(n).padStart(2, '0');
 ---
-<section class="section" id="colors">
+<section class="section section--flush" id="colors">
   <div class="wrap">
-  <div class="section__head">
-    <h2 class="section__title" data-reveal>{t.sections.colors}</h2>
-    <p class="section__note">Klicka på ett fält för att kopiera HEX. Kontrasten visas mot papper (WCAG).</p>
+    <div class="section__head">
+      <h2 class="section__title" data-reveal>{t.sections.colors}</h2>
+      <p class="section__note">Scrolla genom paletten. Klicka på HEX för att kopiera. Kontrasten visas mot papper (WCAG).</p>
+    </div>
   </div>
 
-  <div class="colors">
+  <!-- Colour takeover: one full-viewport panel per colour. Each carries its own
+       background + legible text colour, so it reads even without JS/animation. -->
+  <div class="colorstory" data-colorstory>
     {colors.map((c, i) => (
-      <button class="swatch" data-copy={c.hex} type="button" data-reveal aria-label={`Kopiera ${c.name}, ${c.hex}`}>
-        <span class="swatch__chip" style={`background:${c.hex}`}></span>
-        <span class="swatch__body">
-          <span class="swatch__copy" aria-hidden="true">
-            <svg class="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-            <svg class="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-          </span>
-          <span class="swatch__name">{c.name}{c.role && <span class="swatch__role">{c.role}</span>}</span>
-          <span class="swatch__spec">
-            <span data-copy-label>{c.hex}</span><br />
-            {c.rgb && <>RGB {c.rgb}<br /></>}
-            {c.cmyk && <>CMYK {c.cmyk}<br /></>}
-            {c.pantone && <>PMS {c.pantone}</>}
-          </span>
-          <span class="swatch__contrast" aria-label={`Kontrast som text på papper ${fmtRatio(contrast[i].onPaper.ratio)}, ${ratingLabel(contrast[i].onPaper.rating)}. Läsbar text på fältet: ${contrast[i].bestText.color === 'dark' ? t.contrast.dark : t.contrast.light}, ${ratingLabel(contrast[i].bestText.rating)}.`}>
-            <span class:list={['cbadge', `cbadge--${contrast[i].onPaper.rating}`]} title={`${t.contrast.onPaper} — ${fmtRatio(contrast[i].onPaper.ratio)}`}>
-              <span class="cbadge__k">{ratingLabel(contrast[i].onPaper.rating)}</span> {t.contrast.onPaper}
-            </span>
-            <span class:list={['cbadge', `cbadge--${contrast[i].bestText.rating}`]} title={`${t.contrast.bestText} — ${fmtRatio(contrast[i].bestText.ratio)}`}>
-              <span class="cbadge__swatch" style={`background:${c.hex};color:${contrast[i].bestText.color === 'dark' ? '#111113' : '#ffffff'}`}>Aa</span>
-              {contrast[i].bestText.color === 'dark' ? t.contrast.dark : t.contrast.light} {t.contrast.bestText}
-            </span>
-          </span>
-        </span>
-      </button>
+      <section class="colorpanel" style={`--c:${c.hex};--fg:${fg(i)}`} aria-label={`${c.name} ${c.hex}`}>
+        <div class="colorpanel__inner" data-reveal>
+          <span class="colorpanel__idx">{pad(i + 1)} <span class="colorpanel__idx-sep">/</span> {pad(colors.length)}</span>
+          <h3 class="colorpanel__name">{c.name}</h3>
+          {c.role && <span class="colorpanel__role">{c.role}</span>}
+          <button class="colorpanel__hex" data-copy={c.hex} type="button" aria-label={`Kopiera ${c.hex}`}>
+            <span data-copy-label>{c.hex}</span>
+            <svg class="colorpanel__copyicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          </button>
+          <div class="colorpanel__spec">
+            {c.rgb && <span>RGB {c.rgb}</span>}
+            {c.cmyk && <span>CMYK {c.cmyk}</span>}
+            {c.pantone && <span>PMS {c.pantone}</span>}
+          </div>
+          <div class="colorpanel__contrast">
+            <span class:list={['cpill', `cpill--${contrast[i].onPaper.rating}`]}>{ratingLabel(contrast[i].onPaper.rating)} · {t.contrast.onPaper}</span>
+            <span class="cpill">{fmtRatio(contrast[i].onPaper.ratio)}</span>
+          </div>
+        </div>
+      </section>
     ))}
   </div>
 
-  <div class="tokens" data-tokens>
-    <div class="tokens__head">
-      <span class="tokens__label">{t.tokens.label}</span>
-      <span class="tokens__hint">{t.tokens.hint}</span>
+  <div class="wrap">
+    <div class="tokens" data-tokens>
+      <div class="tokens__head">
+        <span class="tokens__label">{t.tokens.label}</span>
+        <span class="tokens__hint">{t.tokens.hint}</span>
+      </div>
+      <div class="tokens__btns">
+        <button class="btn btn--sm" type="button" data-copy-text={tokens.css} data-copy-done={t.tokens.copied}>CSS</button>
+        <button class="btn btn--sm" type="button" data-copy-text={tokens.json} data-copy-done={t.tokens.copied}>JSON</button>
+        <button class="btn btn--sm" type="button" data-copy-text={tokens.tailwind} data-copy-done={t.tokens.copied}>Tailwind</button>
+      </div>
     </div>
-    <div class="tokens__btns">
-      <button class="btn btn--sm" type="button" data-copy-text={tokens.css} data-copy-done={t.tokens.copied}>CSS</button>
-      <button class="btn btn--sm" type="button" data-copy-text={tokens.json} data-copy-done={t.tokens.copied}>JSON</button>
-      <button class="btn btn--sm" type="button" data-copy-text={tokens.tailwind} data-copy-done={t.tokens.copied}>Tailwind</button>
-    </div>
-  </div>
   </div>
 </section>

@@ -21,6 +21,7 @@ const { title, description = 'Digital brandbook.', accent } = Astro.props;
     {accent && <style is:inline set:html={`:root{--color-brand:${accent}}`} />}
   </head>
   <body>
+    <div class="progress" aria-hidden="true"></div>
     <div class="shell">
       <slot name="nav" />
       <main class="content" id="top">

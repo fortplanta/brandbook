@@ -4,8 +4,12 @@ const { client, tagline, note } = Astro.props;
 ---
 <section class="section cover" id="cover">
   <div class="wrap">
-    <h1 class="cover__title" data-reveal>{client}</h1>
-    {tagline && <p class="cover__tagline" data-reveal>{tagline}</p>}
-    {note && <p class="cover__note" data-reveal>{note}</p>}
+    <h1 class="cover__title">{client}</h1>
+    {tagline && <p class="cover__tagline">{tagline}</p>}
+    {note && <p class="cover__note">{note}</p>}
   </div>
+  <span class="cover__cue" aria-hidden="true">
+    Scrolla
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+  </span>
 </section>
