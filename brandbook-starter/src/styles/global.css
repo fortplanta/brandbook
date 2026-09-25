@@ -273,6 +273,14 @@ html.js .cat[data-open="true"] .cat__list { height: var(--cat-h, auto); }
    the same duration/curve so content and space leave together — one motion. */
 .nav__foot { overflow: hidden; height: var(--foot-h, 7rem); transition: height 0.35s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1); }
 .nav__foot-inner { display: flex; flex-direction: column; gap: 0.5rem; padding-top: 1rem; border-top: 1px solid var(--color-line); }
+/* Desktop: pin the drawer's collapsible content to its EXPANDED inner width. The
+   panel narrows 250px→60px, and without this the footer/sub-lists re-wrap every
+   frame, their ResizeObservers re-set --foot-h/--cat-h mid-flight and restart
+   the height transitions — visible stutter, worst in constrained hosts (iframes).
+   Pinned, their heights stay constant; the panel's overflow:hidden clips them. */
+@media (min-width: 901px) {
+  .nav__foot-inner, .cat__list > ul { width: calc(var(--drawer) - 2 * var(--nav-pad) - 2px); }
+}
 .nav__actions { display: flex; flex-direction: column; gap: 0.5rem; }
 .nav__made { font-size: 0.76rem; color: var(--color-muted); margin: 0; white-space: nowrap; }
 .nav__made a { color: var(--color-ink); text-underline-offset: 2px; }

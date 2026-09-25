@@ -159,8 +159,18 @@ if (motion && chapter && 'IntersectionObserver' in window) {
 }
 measureLogoTargets();
 // the logo SVG may size after first paint — re-measure once it's ready
-window.addEventListener('load', () => { measureLogoTargets(); onScroll(); });
+window.addEventListener('load', () => { measureLogoTargets(); measureSections(); onScroll(); });
 if (logoMark) { const img = logoMark.querySelector('img'); if (img && !img.complete) img.addEventListener('load', () => { measureLogoTargets(); onScroll(); }); }
+
+/* Section tops in document coordinates, cached so the scroll handler never
+   forces a layout (reading getBoundingClientRect per frame would re-run layout
+   while the drawer is mid-transition). Re-measured whenever the page resizes. */
+let sectionTops: number[] = [];
+const measureSections = () => {
+  sectionTops = sections.map((s) => s.getBoundingClientRect().top + window.scrollY);
+};
+measureSections();
+if ('ResizeObserver' in window) new ResizeObserver(() => { measureSections(); }).observe(document.body);
 
 function onScroll() {
   ticking = false;
@@ -175,10 +185,10 @@ function onScroll() {
   }
 
   if (links.size && sections.length) {
-    const line = window.innerHeight * LINE;
+    const line = window.scrollY + window.innerHeight * LINE;
     let activeId = sections[0].id;
-    for (const s of sections) {
-      if (s.getBoundingClientRect().top - line <= 0) activeId = s.id;
+    for (let i = 0; i < sections.length; i++) {
+      if (sectionTops[i] <= line) activeId = sections[i].id;
       else break;
     }
     if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
@@ -202,7 +212,7 @@ onScroll();
 window.addEventListener('scroll', () => {
   if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
-window.addEventListener('resize', () => { measureLogoTargets(); onScroll(); }, { passive: true });
+window.addEventListener('resize', () => { measureLogoTargets(); measureSections(); onScroll(); }, { passive: true });
 
 /* 3. Copy-to-clipboard on colour swatches. */
 document.querySelectorAll<HTMLElement>('[data-copy]').forEach((el) => {
