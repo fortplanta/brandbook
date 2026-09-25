@@ -1,32 +1,110 @@
 ---
 import { t } from '../../lib/strings';
-import type { Logo } from '../../content/profile';
+import type { Logo, DownloadFile } from '../../content/profile';
 interface Props { logos: Logo[]; }
 const { logos } = Astro.props;
+
+/* LOGO CHAPTER — a pinned, scroll-reactive hero on the section layer.
+   The primary logo pins as the chapter's fulcrum and scrubs from a big hero to
+   a compact top-left mark (JS sets --t); content "planes" scroll past it, each
+   aligned to the chapter's left origin. Data-driven and parameterised: the
+   planes are assembled from the logos array + a fixed set of rule planes, and
+   plane grounds come from the palette tokens — swap the client's logo + colours
+   and the choreography is untouched. Reduced-motion / no-JS: the stage un-pins
+   and this reads as a plain stacked hero + sections. */
+
+type Visual = 'none' | 'logo' | 'clear' | 'sizes' | 'misuse';
+interface Plane {
+  key: string; eyebrow: string; title: string; note?: string; files?: DownloadFile[];
+  dir: 'up' | 'left' | 'right'; ground: 'paper' | 'sink'; visual: Visual; logoIdx: number; dark?: boolean;
+}
+
+const primary = logos[0];
+const symbolIdx = logos.findIndex((l) => l.onDark);
+const misuseLogo = symbolIdx >= 0 ? symbolIdx : 0;
+
+const planes: Plane[] = [];
+// primary — the pinned logo IS the visual, so this plane is copy only
+planes.push({ key: 'primary', eyebrow: 'Primär logotyp', title: primary.name, note: primary.note, files: primary.files, dir: 'up', ground: 'paper', visual: 'none', logoIdx: 0 });
+// one plane per additional logo (variants) — shown on their own card
+logos.slice(1).forEach((l, i) => planes.push({
+  key: `variant-${i + 1}`, eyebrow: 'Variant', title: l.name, note: l.note, files: l.files,
+  dir: i % 2 === 0 ? 'left' : 'right', ground: i % 2 === 0 ? 'sink' : 'paper',
+  visual: 'logo', logoIdx: i + 1, dark: l.onDark,
+}));
+// editorial rule planes
+planes.push({ key: 'clearspace', eyebrow: 'Frizon', title: 'Ge logotypen andrum', note: 'Håll fri yta runt logotypen — minst symbolens höjd på alla sidor.', dir: 'up', ground: 'paper', visual: 'clear', logoIdx: 0 });
+planes.push({ key: 'minsize', eyebrow: 'Minsta storlek', title: 'Läsbar även liten', note: 'Under dessa storlekar tappar lockupen läsbarhet — använd symbolen i stället.', dir: 'up', ground: 'sink', visual: 'sizes', logoIdx: 0 });
+planes.push({ key: 'misuse', eyebrow: 'Undvik', title: 'Så här — inte', note: 'Töj inte, rotera inte, färga inte om, placera inte på störande bakgrund.', dir: 'up', ground: 'paper', visual: 'misuse', logoIdx: misuseLogo });
+
+const groundVar = (g: string) => (g === 'sink' ? 'var(--color-sink)' : 'var(--color-paper)');
+const sizes = [{ px: '24 px', w: '3.5rem' }, { px: '40 px', w: '6rem' }, { px: '120 px', w: '13rem' }];
+const misuse = [
+  { key: 'stretch', label: 'Töj inte' }, { key: 'rotate', label: 'Rotera inte' },
+  { key: 'recolor', label: 'Färga inte om' }, { key: 'busy', label: 'Ingen stökig bakgrund' },
+];
 ---
-<section class="section" id="logos">
-  <div class="wrap">
-  <div class="section__head">
-    <h2 class="section__title" data-reveal>{t.sections.logos}</h2>
+<section class="logochapter" id="logos" data-logochapter>
+  <!-- pinned fulcrum -->
+  <div class="logostage" data-logostage>
+    <span class="logostage__eyebrow">{t.sections.logos}</span>
+    <div class="logomark" data-logomark><img src={primary.image} alt={primary.name} /></div>
+    <p class="logostage__tag">Vår logotyp — och hur den ska användas.</p>
   </div>
 
-  <div class="logos">
-    {logos.map((logo) => (
-      <div class="logo" data-reveal>
-        <div class:list={['logo__stage', { 'logo__stage--dark': logo.onDark }]}>
-          <img src={logo.image} alt={`${logo.name}`} />
+  <!-- planes -->
+  <div class="logoplanes">
+    {planes.map((pl) => (
+      <section class="plane" data-plane data-dir={pl.dir} style={`--plane-bg:${groundVar(pl.ground)}`}>
+        <div class="plane__inner">
+          <span class="plane__eyebrow">{pl.eyebrow}</span>
+          <h3 class="plane__title">{pl.title}</h3>
+          {pl.note && <p class="plane__note">{pl.note}</p>}
+
+          {pl.visual === 'logo' && (
+            <div class="plane__visual">
+              <div class:list={['pv-logo', { 'pv-logo--dark': pl.dark }]}>
+                <img src={logos[pl.logoIdx].image} alt={logos[pl.logoIdx].name} />
+              </div>
+            </div>
+          )}
+          {pl.visual === 'clear' && (
+            <div class="plane__visual pv-clear">
+              <span class="pv-clear__box"></span>
+              <img src={logos[pl.logoIdx].image} alt="" />
+            </div>
+          )}
+          {pl.visual === 'sizes' && (
+            <div class="plane__visual pv-sizes">
+              {sizes.map((s) => (
+                <div class="pv-size">
+                  <img src={logos[pl.logoIdx].image} alt="" style={`width:${s.w}`} />
+                  <span>{s.px}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {pl.visual === 'misuse' && (
+            <div class="plane__visual pv-misuse">
+              {misuse.map((m) => (
+                <figure class:list={['misuse', `misuse--${m.key}`]}>
+                  <div class="misuse__frame"><img src={logos[pl.logoIdx].image} alt="" /></div>
+                  <figcaption class="misuse__cap">
+                    <span class="misuse__x" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span>
+                    {m.label}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
+          )}
+
+          {pl.files && (
+            <div class="plane__files">
+              {pl.files.map((f) => (<a class="btn btn--sm" href={f.href} download>{t.actions.download} {f.label}</a>))}
+            </div>
+          )}
         </div>
-        <div class="logo__foot">
-          <span class="logo__name">{logo.name}</span>
-          {logo.note && <p class="logo__note">{logo.note}</p>}
-          <div class="logo__files">
-            {logo.files.map((f) => (
-              <a class="btn btn--sm" href={f.href} download>{t.actions.download} {f.label}</a>
-            ))}
-          </div>
-        </div>
-      </div>
+      </section>
     ))}
-  </div>
   </div>
 </section>

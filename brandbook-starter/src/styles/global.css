@@ -25,6 +25,11 @@
 * { box-sizing: border-box; }
 html { color-scheme: light; scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+/* Logo chapter uses native snap. `proximity` (not mandatory) so ONLY the logo
+   frames — the only elements with scroll-snap-align — snap; every other section
+   (the colour takeover, typography, etc.) scrolls freely. Switch this one word
+   to `mandatory` for the firm Dropbox feel IF the logo lives on its own page. */
+html { scroll-snap-type: y proximity; }
 body {
   margin: 0;
   background: var(--color-paper);
@@ -534,16 +539,11 @@ html.js .nav[data-min]:not(:hover):not(:focus-within) .cat__list { height: 0 !im
 /* ============================================================================
    SCROLL REVEAL
    ========================================================================== */
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    [data-reveal] { animation: reveal-in linear both; animation-timeline: view(); animation-range: entry 2% cover 16%; }
-  }
-  @supports not (animation-timeline: view()) {
-    html.js [data-reveal] { opacity: 0; transform: translateY(1rem); transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.16,1,0.3,1); }
-    html.js [data-reveal].is-visible { opacity: 1; transform: none; }
-  }
-}
-@keyframes reveal-in { from { opacity: 0; transform: translateY(1.25rem); } to { opacity: 1; transform: none; } }
+/* Reveals are JS-driven (enhance.ts adds html.anim, then .is-visible per element
+   via IntersectionObserver). Content is visible by default — only hidden when
+   motion is on — so no-JS and reduced-motion both show everything, static. */
+html.anim [data-reveal] { opacity: 0; transform: translateY(1.25rem); transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.16,1,0.3,1); }
+html.anim [data-reveal].is-visible { opacity: 1; transform: none; }
 
 /* ============================================================================
    PRINT
@@ -563,23 +563,18 @@ html.js .nav[data-min]:not(:hover):not(:focus-within) .cat__list { height: 0 !im
    SCROLL EXPERIENCE — scrollytelling motion, native-CSS-first, reduced-motion-safe
    ========================================================================== */
 
-/* --- top scroll-progress bar (pure CSS, driven by scroll position) --- */
+/* --- top scroll-progress bar (JS sets --sp = 0..1 in enhance.ts) --- */
 .progress {
-  position: fixed; top: 0; left: 0; height: 2px; width: 100%; z-index: 200;
-  background: var(--color-brand); transform: scaleX(0); transform-origin: 0 50%; pointer-events: none;
+  position: fixed; top: 0; left: 0; height: 3px; width: 100%; z-index: 200;
+  background: var(--color-brand); transform: scaleX(var(--sp, 0)); transform-origin: 0 50%;
+  pointer-events: none; transition: transform 0.1s linear; display: none;
 }
-@supports (animation-timeline: scroll()) {
-  .progress { animation: progress-grow linear both; animation-timeline: scroll(root block); }
-}
-@keyframes progress-grow { to { transform: scaleX(1); } }
-@media (prefers-reduced-motion: reduce) { .progress { display: none; } }
+html.anim .progress { display: block; }
 
 /* --- Cover entrance (on load) + scroll cue --- */
-@media (prefers-reduced-motion: no-preference) {
-  html.js .cover__title  { animation: cover-in 0.9s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
-  html.js .cover__tagline{ animation: cover-in 0.9s cubic-bezier(0.16,1,0.3,1) 0.16s both; }
-  html.js .cover__note   { animation: cover-in 0.9s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
-}
+html.anim .cover__title  { animation: cover-in 0.9s cubic-bezier(0.16,1,0.3,1) 0.05s both; }
+html.anim .cover__tagline{ animation: cover-in 0.9s cubic-bezier(0.16,1,0.3,1) 0.16s both; }
+html.anim .cover__note   { animation: cover-in 0.9s cubic-bezier(0.16,1,0.3,1) 0.26s both; }
 @keyframes cover-in {
   from { opacity: 0; transform: translateY(1.6rem); clip-path: inset(0 0 105% 0); }
   to   { opacity: 1; transform: none;             clip-path: inset(0 0 -20% 0); }
@@ -590,21 +585,23 @@ html.js .nav[data-min]:not(:hover):not(:focus-within) .cat__list { height: 0 !im
   color: var(--color-muted); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase;
 }
 .cover__cue svg { width: 14px; height: 14px; }
-@media (prefers-reduced-motion: no-preference) {
-  html.js .cover__cue svg { animation: cue-bob 1.8s ease-in-out infinite; }
-  @supports (animation-timeline: scroll()) {
-    .cover__cue { animation: cue-fade linear both; animation-timeline: scroll(root block); animation-range: 0 40vh; }
-  }
-}
-@keyframes cue-bob  { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
-@keyframes cue-fade { to { opacity: 0; transform: translateY(6px); } }
+html.anim .cover__cue svg { animation: cue-bob 1.8s ease-in-out infinite; }
+@keyframes cue-bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(3px); } }
 
-/* --- Colour takeover: full-viewport panels, each in its own colour --- */
+/* --- Colour takeover: pinned stage, cross-fading through the palette ---------
+   Base (no JS / reduced motion): cards are a plain vertical stack, each painted
+   in its own colour — always readable, never blank.
+   html.anim: .colorstory becomes tall (one 100svh screen per colour) and the
+   stage pins; JS (enhance.ts) toggles .is-active per scroll segment, so the
+   background cross-fades and the matching card fades in. ------------------- */
 .section--flush { padding-inline: 0; }
 .section--flush > .wrap { padding-inline: var(--gutter); }
+
+.colorstory { position: relative; }
+.colorstory__bgs, .colorstory__dots { display: none; }        /* fallback: off */
 .colorpanel {
-  min-height: 100svh; background: var(--c); color: var(--fg);
-  display: grid; align-items: center;
+  background: var(--c); color: var(--fg);
+  min-height: 78svh; display: grid; align-items: center;
   padding: clamp(2rem, 8vh, 6rem) var(--gutter);
   padding-right: max(var(--gutter), calc(var(--rail) + var(--drawer-x) + 1.5rem));
 }
@@ -625,16 +622,118 @@ html.js .nav[data-min]:not(:hover):not(:focus-within) .cat__list { height: 0 !im
 .colorpanel__contrast { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.4rem; }
 .cpill { font-size: 0.72rem; border: 1px solid currentColor; border-radius: 999px; padding: 0.25rem 0.6rem; opacity: 0.72; white-space: nowrap; }
 .cpill--low { opacity: 1; font-weight: 600; }
-/* a touch more travel on the panel content reveal than the default */
-@supports (animation-timeline: view()) {
-  .colorpanel__inner[data-reveal] { animation: panel-in linear both; animation-timeline: view(); animation-range: entry 4% cover 26%; }
-}
-@keyframes panel-in { from { opacity: 0; transform: translateY(2.25rem); } to { opacity: 1; transform: none; } }
 
-/* --- Type specimen: scale/slide in as it enters --- */
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .type__specimen { animation: specimen-in linear both; animation-timeline: view(); animation-range: entry 0% cover 35%; transform-origin: left center; }
-  }
+/* --- pinned takeover (motion on) --- */
+html.anim .colorstory { height: calc(var(--count) * 100svh); }
+html.anim .colorstory__stage { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+html.anim .colorstory__bgs { display: block; }
+html.anim .colorstory__bg { position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+html.anim .colorstory__bg.is-active { opacity: 1; }
+html.anim .colorstory__cards { position: absolute; inset: 0; z-index: 2; display: grid; }
+html.anim .colorpanel {
+  grid-area: 1 / 1; min-height: 0; height: 100%;
+  background: transparent; color: var(--fg);
+  opacity: 0; transform: translateY(2.25rem);
+  transition: opacity 0.7s ease, transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
-@keyframes specimen-in { from { opacity: 0; transform: translateY(1.5rem) scale(0.965); } to { opacity: 1; transform: none; } }
+html.anim .colorpanel.is-active { opacity: 1; transform: none; pointer-events: auto; }
+/* progress dots — vertical column on the left, clear of the top-right drawer */
+html.anim .colorstory__dots {
+  display: flex; flex-direction: column; gap: 0.65rem;
+  position: absolute; z-index: 3; left: clamp(1rem, 3vw, 2rem); top: 50%;
+  transform: translateY(-50%); color: var(--fg, #fff);
+  transition: color 0.6s ease;
+}
+html.anim .colorstory__dot {
+  width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+  opacity: 0.32; transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+html.anim .colorstory__dot.is-active { opacity: 1; transform: scale(1.55); }
+@media (max-width: 640px) { html.anim .colorstory__dots { left: 0.6rem; } }
+
+/* --- Type specimen: scale/slide in as it enters (JS-driven) --- */
+html.anim .type__specimen { opacity: 0; transform: translateY(1.5rem) scale(0.965); transform-origin: left center; transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+html.anim .type__specimen.is-visible { opacity: 1; transform: none; }
+
+/* ============================================================================
+   LOGO CHAPTER — pinned, scroll-reactive hero (a section-layer fulcrum).
+   One persistent logo pins as the chapter's anchor and scrubs from a big hero
+   into a compact top-left mark while content "planes" scroll past it. It stays
+   on the SECTION layer — it never morphs into or replaces the global nav mark;
+   hierarchy (big/high-contrast section logo vs. small/quiet nav mark) keeps the
+   two from competing. PARAMETERISED: swap the logo asset + palette and the
+   choreography is unchanged — nothing here hard-codes a client.
+     Params:  .logochapter { --logo-min } (compact scale)
+              .logochapter--center        (anchor top-centre instead of top-left)
+              JS: ANCHOR_X_REM / ANCHOR_Y_REM / TRANSITION_VH
+   Reduced-motion / no-JS: the stage un-pins; logo + planes read as a plain
+   stacked hero, always legible.
+   ========================================================================== */
+.logochapter { --logo-min: 0.42; position: relative; border-top: 1px solid var(--color-line); scroll-margin-top: 1.5rem; }
+
+/* pinned foreground stage (transparent apart from the logo) */
+.logostage {
+  position: static; min-height: 88svh; z-index: 6;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.4rem; padding: clamp(2rem, 8vh, 5rem) var(--gutter); text-align: center;
+  pointer-events: none;
+}
+html.anim .logostage { position: sticky; top: 0; height: 100svh; min-height: 0; }
+.logostage__eyebrow { font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--color-muted); }
+.logomark { display: grid; place-items: center; transform-origin: center; will-change: transform; }
+.logomark img { width: min(46vw, 30rem); height: auto; max-height: 40svh; }
+.logostage__tag { max-width: 34ch; margin: 0; color: var(--color-muted); font-size: clamp(1rem, 2.2vw, 1.35rem); line-height: 1.4; }
+
+/* motion-on: JS drives --t (0 hero → 1 compact); logo scrubs to the anchor */
+html.anim .logomark {
+  transform: translate(calc(var(--tx, 0px) * var(--t, 0)), calc(var(--ty, 0px) * var(--t, 0)))
+             scale(calc(1 - (1 - var(--logo-min)) * var(--t, 0)));
+}
+html.anim .logostage__eyebrow, html.anim .logostage__tag { opacity: calc(1 - var(--t, 0) * 1.7); }
+
+/* planes — content scrolls past, aligned to the chapter's left origin */
+.logoplanes { position: relative; z-index: 1; }
+.plane {
+  min-height: 100svh; display: grid; align-items: center;
+  background: var(--plane-bg, var(--color-paper)); color: var(--plane-fg, var(--color-ink));
+  padding: clamp(3rem, 12vh, 7rem) var(--gutter);
+  padding-right: max(var(--gutter), calc(var(--rail) + var(--drawer-x) + 1.5rem));
+  border-top: 1px solid color-mix(in oklab, var(--plane-fg, var(--color-ink)) 9%, transparent);
+}
+.plane__inner { width: 100%; max-width: 60rem; margin-inline: auto; }
+.plane__eyebrow { display: block; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; opacity: 0.58; }
+.plane__title { font-size: clamp(1.8rem, 5vw, 3.1rem); line-height: 1.02; letter-spacing: -0.025em; margin: 0.7rem 0 0; }
+.plane__note { max-width: 46ch; margin: 1rem 0 0; line-height: 1.55; opacity: 0.78; font-size: 1.05rem; }
+.plane__files { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
+.plane__visual { margin-top: 2.25rem; }
+
+/* plane entrance (motion-on): settle from data-dir as it crosses in */
+html.anim .plane__inner { opacity: 0; transform: translateY(2rem); transition: opacity 0.6s ease, transform 0.85s cubic-bezier(0.16,1,0.3,1); }
+html.anim .plane[data-dir="left"]  .plane__inner { transform: translateX(-2.5rem); }
+html.anim .plane[data-dir="right"] .plane__inner { transform: translateX(2.5rem); }
+html.anim .plane.is-in .plane__inner { opacity: 1; transform: none; }
+
+/* plane visuals */
+.pv-logo { display: grid; place-items: center; min-height: 42svh; padding: 2.5rem; border-radius: 16px; background: var(--color-sink); border: 1px solid var(--color-line); }
+.pv-logo--dark { background: var(--color-ink); border-color: transparent; }
+.pv-logo img { max-width: 68%; max-height: 170px; }
+.pv-clear { position: relative; display: grid; place-items: center; min-height: 44svh; }
+.pv-clear__box { position: absolute; width: min(58%, 32rem); height: min(46svh, 22rem); border: 1.5px dashed color-mix(in oklab, var(--plane-fg, var(--color-ink)) 38%, transparent); border-radius: 4px; }
+.pv-clear img { position: relative; width: min(30%, 15rem); }
+.pv-sizes { display: flex; align-items: flex-end; gap: clamp(1.5rem, 5vw, 3.5rem); flex-wrap: wrap; }
+.pv-size { display: grid; justify-items: start; gap: 0.7rem; }
+.pv-size img { display: block; }
+.pv-size span { font-family: var(--font-mono); font-size: 0.72rem; opacity: 0.6; }
+.pv-misuse { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: clamp(0.6rem,1.5vw,1rem); }
+@media (min-width: 760px) { .pv-misuse { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+.misuse { margin: 0; }
+.misuse__frame { aspect-ratio: 4/3; display: grid; place-items: center; overflow: hidden; background: var(--color-sink); border: 1px solid var(--color-line); border-radius: 10px; }
+.misuse__frame img { max-width: 66%; max-height: 58%; }
+.misuse--stretch .misuse__frame img { transform: scaleX(1.9); }
+.misuse--rotate  .misuse__frame img { transform: rotate(13deg); }
+.misuse--recolor .misuse__frame img { filter: grayscale(1) brightness(0.4) sepia(1) hue-rotate(280deg) saturate(6); }
+.misuse--busy    .misuse__frame { background: repeating-linear-gradient(45deg,#7a7a7a,#7a7a7a 8px,#9a9a9a 8px,#9a9a9a 16px); }
+.misuse__cap { display: flex; align-items: center; gap: 0.4rem; margin-top: 0.5rem; font-size: 0.82rem; opacity: 0.72; }
+.misuse__x { display: inline-grid; place-items: center; width: 16px; height: 16px; color: #c8452f; flex: none; }
+.misuse__x svg { width: 100%; height: 100%; }

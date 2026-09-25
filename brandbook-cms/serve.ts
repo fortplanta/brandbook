@@ -5,10 +5,13 @@ import http from 'http'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import nextEnv from '@next/env'
+const { loadEnvConfig } = nextEnv
 import { getPayload } from 'payload'
 import config from './payload.config'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
+loadEnvConfig(dirname)
 const MEDIA = path.resolve(dirname, 'media')
 const payload = await getPayload({ config })
 

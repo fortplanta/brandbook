@@ -23,31 +23,57 @@ const pad = (n: number) => String(n).padStart(2, '0');
     </div>
   </div>
 
-  <!-- Colour takeover: one full-viewport panel per colour. Each carries its own
-       background + legible text colour, so it reads even without JS/animation. -->
-  <div class="colorstory" data-colorstory>
-    {colors.map((c, i) => (
-      <section class="colorpanel" style={`--c:${c.hex};--fg:${fg(i)}`} aria-label={`${c.name} ${c.hex}`}>
-        <div class="colorpanel__inner" data-reveal>
-          <span class="colorpanel__idx">{pad(i + 1)} <span class="colorpanel__idx-sep">/</span> {pad(colors.length)}</span>
-          <h3 class="colorpanel__name">{c.name}</h3>
-          {c.role && <span class="colorpanel__role">{c.role}</span>}
-          <button class="colorpanel__hex" data-copy={c.hex} type="button" aria-label={`Kopiera ${c.hex}`}>
-            <span data-copy-label>{c.hex}</span>
-            <svg class="colorpanel__copyicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          </button>
-          <div class="colorpanel__spec">
-            {c.rgb && <span>RGB {c.rgb}</span>}
-            {c.cmyk && <span>CMYK {c.cmyk}</span>}
-            {c.pantone && <span>PMS {c.pantone}</span>}
-          </div>
-          <div class="colorpanel__contrast">
-            <span class:list={['cpill', `cpill--${contrast[i].onPaper.rating}`]}>{ratingLabel(contrast[i].onPaper.rating)} · {t.contrast.onPaper}</span>
-            <span class="cpill">{fmtRatio(contrast[i].onPaper.ratio)}</span>
-          </div>
-        </div>
-      </section>
-    ))}
+  <!-- Colour takeover. When motion is on (html.anim), .colorstory is a tall
+       container and .colorstory__stage pins (position:sticky) for one viewport
+       per colour: the background cross-fades between layers and the matching
+       card fades in — a scroll-hijacked palette walk. Without JS/animation the
+       same cards fall back to a plain vertical stack, each in its own colour,
+       so the palette always reads. -->
+  <div class="colorstory" data-colorstory style={`--count:${colors.length}`}>
+    <div class="colorstory__stage">
+      <div class="colorstory__bgs" aria-hidden="true">
+        {colors.map((c, i) => (
+          <div class:list={['colorstory__bg', i === 0 && 'is-active']} data-bg={i} style={`background:${c.hex}`}></div>
+        ))}
+      </div>
+
+      <div class="colorstory__dots" aria-hidden="true">
+        {colors.map((c, i) => (
+          <span class:list={['colorstory__dot', i === 0 && 'is-active']} data-dot={i}></span>
+        ))}
+      </div>
+
+      <div class="colorstory__cards">
+        {colors.map((c, i) => (
+          <article
+            class:list={['colorpanel', i === 0 && 'is-active']}
+            data-panel={i}
+            data-fg={fg(i)}
+            style={`--c:${c.hex};--fg:${fg(i)}`}
+            aria-label={`${c.name} ${c.hex}`}
+          >
+            <div class="colorpanel__inner">
+              <span class="colorpanel__idx">{pad(i + 1)} <span class="colorpanel__idx-sep">/</span> {pad(colors.length)}</span>
+              <h3 class="colorpanel__name">{c.name}</h3>
+              {c.role && <span class="colorpanel__role">{c.role}</span>}
+              <button class="colorpanel__hex" data-copy={c.hex} type="button" aria-label={`Kopiera ${c.hex}`}>
+                <span data-copy-label>{c.hex}</span>
+                <svg class="colorpanel__copyicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+              <div class="colorpanel__spec">
+                {c.rgb && <span>RGB {c.rgb}</span>}
+                {c.cmyk && <span>CMYK {c.cmyk}</span>}
+                {c.pantone && <span>PMS {c.pantone}</span>}
+              </div>
+              <div class="colorpanel__contrast">
+                <span class:list={['cpill', `cpill--${contrast[i].onPaper.rating}`]}>{ratingLabel(contrast[i].onPaper.rating)} · {t.contrast.onPaper}</span>
+                <span class="cpill">{fmtRatio(contrast[i].onPaper.ratio)}</span>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
   </div>
 
   <div class="wrap">

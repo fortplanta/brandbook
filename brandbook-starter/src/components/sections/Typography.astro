@@ -21,7 +21,7 @@ const pangram = 'Yxskaftbud, ge vår WC-zonmö IQ-hjälp.';
           <a class="btn btn--sm" href={f.href} download>{t.actions.download} {f.label}</a>
         ))}
       </div>
-      <p class="type__specimen" style={`font-family:${face.stack}`}>{face.specimen ?? pangram}</p>
+      <p class="type__specimen" data-reveal style={`font-family:${face.stack}`}>{face.specimen ?? pangram}</p>
       <div class="type__scale" style={`font-family:${face.stack}`}>
         <span style="font-size:2rem">Aa</span>
         <span>ABCDEFGHIJKLM abcdefghijklm 0123456789 åäö</span>

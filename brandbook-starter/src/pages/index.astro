@@ -4,7 +4,7 @@ import SideNav from '../components/SideNav.astro';
 import Cover from '../components/sections/Cover.astro';
 import Platform from '../components/sections/Platform.astro';
 import Tone from '../components/sections/Tone.astro';
-import Logos from '../components/sections/Logos.astro';
+import LogotypesSection from '../components/sections/LogotypesSection.astro';
 import Colors from '../components/sections/Colors.astro';
 import Typography from '../components/sections/Typography.astro';
 import Imagery from '../components/sections/Imagery.astro';
@@ -63,7 +63,7 @@ const activeSections = categories
     <>
       {id === 'plattform' && <Platform platform={profile.platform} />}
       {id === 'tonalitet' && profile.tone && <Tone tone={profile.tone} />}
-      {id === 'logos' && <Logos logos={profile.logos} />}
+      {id === 'logos' && <LogotypesSection />}
       {id === 'colors' && <Colors colors={profile.colors} typography={profile.typography} />}
       {id === 'typography' && <Typography typography={profile.typography} />}
       {id === 'imagery' && <Imagery note={profile.imagery.note} images={profile.imagery.images} />}

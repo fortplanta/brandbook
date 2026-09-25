@@ -5,19 +5,23 @@
  */
 document.documentElement.classList.add('js');
 
-const supportsScrollTimeline =
-  typeof CSS !== 'undefined' && CSS.supports('animation-timeline: view()');
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const motion = !reduceMotion;
+// A single class gates all motion. CSS-only scroll timelines proved unreliable
+// inside embedded/preview frames, so every effect below is JS-driven instead.
+if (motion) document.documentElement.classList.add('anim');
 
-/* 1. Reveal fallback (only when native scroll timelines are missing). */
-if (!supportsScrollTimeline && !reduceMotion) {
+/* 1. Scroll reveals — JS (IntersectionObserver). Fires in any frame, unlike
+      CSS scroll timelines. Content is visible by default; we only hide-then-
+      reveal when motion is on. */
+if (motion && 'IntersectionObserver' in window) {
   const io = new IntersectionObserver(
     (entries) => {
       for (const e of entries) {
         if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
       }
     },
-    { rootMargin: '0px 0px -12% 0px' }
+    { rootMargin: '0px 0px -8% 0px', threshold: 0.04 }
   );
   document.querySelectorAll('[data-reveal]').forEach((el) => io.observe(el));
 }
@@ -33,6 +37,7 @@ document.querySelectorAll<HTMLElement>('[data-nav-link]').forEach((l) =>
 );
 const sections = Array.from(document.querySelectorAll<HTMLElement>('section[id]'));
 const drawer = document.querySelector<HTMLElement>('[data-nav]');
+const progress = document.querySelector<HTMLElement>('.progress');
 
 /* Accordion categories: measure each sub-list into --cat-h so it collapses from
    a real height; map each section to its category; wire the open/close toggles. */
@@ -79,9 +84,95 @@ const LINE = 0.32;        // active-section trigger line, as a fraction down the
 let currentId = '';
 let ticking = false;
 
+/* Colour takeover driver. The pinned stage (.colorstory__stage) sticks for one
+   viewport per colour; we map how far the tall .colorstory has scrolled past the
+   top of the viewport to an active index, then cross-fade the background layer,
+   the matching card, and the progress dots. Purely presentational — the cards
+   are already readable without it. */
+const story = document.querySelector<HTMLElement>('[data-colorstory]');
+const storyBgs = story ? Array.from(story.querySelectorAll<HTMLElement>('[data-bg]')) : [];
+const storyPanels = story ? Array.from(story.querySelectorAll<HTMLElement>('[data-panel]')) : [];
+const storyDotWrap = story?.querySelector<HTMLElement>('.colorstory__dots') ?? null;
+const storyDots = story ? Array.from(story.querySelectorAll<HTMLElement>('[data-dot]')) : [];
+const storyFgs = storyPanels.map((p) => p.dataset.fg || '#fff');
+const storyCount = storyPanels.length;
+let storyIdx = -1;
+
+function driveColorStory() {
+  if (!motion || !story || storyCount === 0) return;
+  const rect = story.getBoundingClientRect();
+  const vh = window.innerHeight;
+  const span = story.offsetHeight - vh; // scrollable distance while pinned
+  const p = span > 0 ? Math.min(1, Math.max(0, -rect.top / span)) : 0;
+  const idx = Math.min(storyCount - 1, Math.floor(p * storyCount));
+  if (idx === storyIdx) return;
+  storyIdx = idx;
+  storyBgs.forEach((b, i) => b.classList.toggle('is-active', i === idx));
+  storyPanels.forEach((c, i) => c.classList.toggle('is-active', i === idx));
+  storyDots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
+  if (storyDotWrap) storyDotWrap.style.color = storyFgs[idx];
+}
+
+/* Logo chapter MotionController. A generic scroll→progress pipeline: the
+   primary logo pins and scrubs from hero (--t 0) to compact (--t 1) over the
+   first TRANSITION_VH of the chapter, then holds. The transform target (--tx,
+   --ty = the delta from the centred hero to the compact anchor) is MEASURED
+   from layout, so it holds for any logo size or palette — no per-client logic.
+   Planes settle in via their own observer. Everything reads from params. */
+const chapter = document.querySelector<HTMLElement>('[data-logochapter]');
+const logoStage = chapter?.querySelector<HTMLElement>('[data-logostage]') ?? null;
+const logoMark = chapter?.querySelector<HTMLElement>('[data-logomark]') ?? null;
+const ANCHOR_X_REM = 2;      // compact logo inset from the left, in rem
+const ANCHOR_Y_REM = 1.9;    // compact logo inset from the top, in rem
+const TRANSITION_VH = 0.78;  // scroll distance (in viewports) for hero→compact
+
+function measureLogoTargets() {
+  if (!motion || !chapter || !logoStage || !logoMark) return;
+  const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const min = parseFloat(getComputedStyle(chapter).getPropertyValue('--logo-min')) || 0.42;
+  const center = chapter.classList.contains('logochapter--center');
+  // offsets are layout-based, so unaffected by the current transform
+  const heroCX = logoMark.offsetLeft + logoMark.offsetWidth / 2;
+  const heroCY = logoMark.offsetTop + logoMark.offsetHeight / 2;
+  const targetCX = center ? logoStage.clientWidth / 2 : ANCHOR_X_REM * rem + (logoMark.offsetWidth * min) / 2;
+  const targetCY = ANCHOR_Y_REM * rem + (logoMark.offsetHeight * min) / 2;
+  // set on the stage so the mark AND the eyebrow/tagline siblings all inherit
+  logoStage.style.setProperty('--tx', `${Math.round(targetCX - heroCX)}px`);
+  logoStage.style.setProperty('--ty', `${Math.round(targetCY - heroCY)}px`);
+}
+
+function driveLogoChapter() {
+  if (!motion || !chapter || !logoStage || !logoMark) return;
+  const scrolled = Math.max(0, -chapter.getBoundingClientRect().top);
+  const t = Math.min(1, scrolled / (window.innerHeight * TRANSITION_VH));
+  logoStage.style.setProperty('--t', String(t));
+  logoStage.dataset.phase = t < 0.02 ? 'hero' : t > 0.985 ? 'compact' : 'sticky';
+}
+
+/* Plane entrance — settle each plane once as it crosses in. */
+if (motion && chapter && 'IntersectionObserver' in window) {
+  const pio = new IntersectionObserver(
+    (entries) => { for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); pio.unobserve(e.target); } },
+    { rootMargin: '0px 0px -12% 0px', threshold: 0.12 }
+  );
+  chapter.querySelectorAll('[data-plane]').forEach((pl) => pio.observe(pl));
+}
+measureLogoTargets();
+// the logo SVG may size after first paint — re-measure once it's ready
+window.addEventListener('load', () => { measureLogoTargets(); onScroll(); });
+if (logoMark) { const img = logoMark.querySelector('img'); if (img && !img.complete) img.addEventListener('load', () => { measureLogoTargets(); onScroll(); }); }
+
 function onScroll() {
   ticking = false;
   if (drawer) drawer.toggleAttribute('data-min', window.scrollY > window.innerHeight * MINIMIZE_AT);
+  driveColorStory();
+  driveLogoChapter();
+
+  // Scroll progress bar (JS-driven — no CSS scroll timeline needed).
+  if (progress && motion) {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    progress.style.setProperty('--sp', String(max > 0 ? Math.min(1, window.scrollY / max) : 0));
+  }
 
   if (links.size && sections.length) {
     const line = window.innerHeight * LINE;
@@ -111,7 +202,7 @@ onScroll();
 window.addEventListener('scroll', () => {
   if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
 }, { passive: true });
-window.addEventListener('resize', onScroll, { passive: true });
+window.addEventListener('resize', () => { measureLogoTargets(); onScroll(); }, { passive: true });
 
 /* 3. Copy-to-clipboard on colour swatches. */
 document.querySelectorAll<HTMLElement>('[data-copy]').forEach((el) => {

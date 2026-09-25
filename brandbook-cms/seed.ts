@@ -5,10 +5,13 @@
    ========================================================================== */
 import path from 'path'
 import { fileURLToPath } from 'url'
+import nextEnv from '@next/env'
+const { loadEnvConfig } = nextEnv
 import { getPayload } from 'payload'
 import config from './payload.config'
 
 const dirname = path.dirname(fileURLToPath(import.meta.url))
+loadEnvConfig(dirname)
 // Reuse the placeholder assets that ship with the Astro starter.
 const ASSETS = path.resolve(dirname, '../brandbook-starter/public/assets')
 

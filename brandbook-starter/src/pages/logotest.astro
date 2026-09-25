@@ -1,0 +1,26 @@
+---
+import LogotypesSection from '../components/sections/LogotypesSection.astro';
+---
+<!doctype html>
+<html lang="sv">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Logotyper — pinned track</title>
+    <style>
+      :root { color-scheme: light; }
+      /* Native snap, matching the Dropbox brand site exactly:
+         mandatory snap on the PAGE scroller + scroll-behavior:auto (browser owns
+         the settle). Each .lt-frame is a snap target. This is safe on the page
+         scroll — the capture problem only ever came from a nested scroller. */
+      html { scroll-snap-type: y mandatory; scroll-behavior: auto; }
+      body { margin: 0; font-family: "Inter", system-ui, sans-serif; background: #fff; }
+      .band { min-height: 120svh; display: grid; place-items: center; background: #101014; color: #fff; font-size: 1.2rem; text-align: center; padding: 2rem; }
+    </style>
+  </head>
+  <body>
+    <div class="band">↑ vanlig lång sektion — scrolla NER i normal takt rakt in i kapitlet<br/>(du ska aldrig behöva "träffa" det)</div>
+    <LogotypesSection />
+    <div class="band">↓ vanlig sektion fortsätter — kapitlet släppte taget av sig självt</div>
+  </body>
+</html>
