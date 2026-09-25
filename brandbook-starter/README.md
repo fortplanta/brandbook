@@ -13,7 +13,7 @@ Everything the book shows comes from **one file**: `src/content/profile.ts`. To 
 3. Set `accent` to the client's brand colour — it's used *only inside content* (active nav dot, swatch focus), never on the neutral chrome.
 4. `npm run build`, deploy the static `dist/` anywhere.
 
-Any section whose array is empty **disappears from the page and the side nav automatically**, so the same template fits a one-page identity or a sprawling system. That's the "scales from small to large" requirement handled by data, not by editing layout.
+By default the **whole template structure shows** — all 28 sections — and a section without content renders as a placeholder describing what belongs there. Per client you choose what's shown (`visibility`, `hideEmpty` — see below), so the same template fits a one-page identity or a sprawling system, handled by data, not by editing layout.
 
 **CMS handoff:** the CMS just needs to output the `Profile` shape in `profile.ts`. Map its fields to that interface, delete the sample object, and nothing else changes. The types are the contract. A ready-made Payload CMS that does exactly this ships alongside in `brandbook-cms/` — see below.
 
@@ -32,33 +32,40 @@ The wiring is three small files, and no component changes:
 
 - `src/lib/loadProfile.ts` — the switch: fetch-from-CMS or local file, returns `Profile`.
 - `src/lib/payloadMap.ts` — maps one Payload `clients` document to `Profile` (unwraps uploaded files to absolute URLs, normalises dates).
-- `src/content/categories.ts` — the sidebar structure, kept in the repo because it's agency structure, not per-client content.
+- `src/content/categories.ts` — the template structure (categories + numbered sections), kept in the repo because it's agency structure, not per-client content.
 
 Because content is pulled at **build time**, the CMS is never a runtime dependency: a published book is static and keeps serving even if the CMS is offline. Publishing in the CMS triggers a rebuild of that one client's site (a deploy webhook). Full setup, the per-client editor roles, and the SQLite-now / Postgres-later path are in `brandbook-cms/README.md`.
 
-## Categories & the locked-teaser upsell
+## Structure: categories, sections & what shows
 
-The side nav is grouped into collapsible **categories** (an accordion), so a big book reads as a few openable groups instead of a long flat list. Categories are defined once, in the `categories` array in `profile.ts`, and each maps to a set of section ids:
+The template is one fixed structure — 5 categories, 28 numbered sections — defined in `src/content/categories.ts` (names, numbers, order and the placeholder copy for each):
 
 ```
-Kärnan    → plattform            (the brand's idea / position / values)
-Röst      → tonalitet            (tone of voice: principles, do/don't, boilerplate)
-Uttryck   → logos, colors, typography, imagery, motion
-I bruk    → (locked teaser)
-Material  → downloads
+I.   Varumärkesplattform    1–9    Introduktion … Målgrupper / personas
+II.  Visuell identitet     10–17   Logotyp, Färgpalett, Typografi, … Illustrationsmanér
+III. Rörligt & ljud        18–20   Rörlig identitet, Video-guidelines, Ljud-ID
+IV.  Tillämpning           21–25   Digitala/Print-applikationer, Co-branding, Merch, Exempel
+V.   Resurser & governance 26–28   Nedladdningsbara assets, Kontakt & godkännande, Versionshistorik
 ```
 
-Each category has **three possible states**, and this is the mechanic that makes one template serve both a tiny client and a full system:
+Section headings carry the number and category ("10 — Visuell identitet"); the side nav groups them into collapsible categories (an accordion).
 
-- **Active** — has content; renders normally, opens and closes.
-- **Hidden** — omit it (or leave its sections empty) and it vanishes entirely. This is how you ship a *clean, minimal* brandbook for a small client: just colours and a logo, nothing else on screen.
-- **Locked** (`locked: true`) — appears **greyed out and non-clickable**, with a small lock and an "Ingår inte ännu" hint. It's a deliberate soft upsell: the client sees the shape of what a fuller engagement would add ("…should we maybe have done more?") without it being sold aggressively. Rename/retheme these freely per pitch.
+**What shows is granular, per client** (in `profile.ts`):
 
-So the same file expresses "this is all they bought" and "here's what they didn't (yet)" in one place. Category names are meant to be evocative rather than functional — treat them as copy, not labels.
+- **Default** — every section renders. One with content uses its component; one without renders a **placeholder** ("Innehåll saknas" + what belongs there).
+- **`visibility`** — keyed by a section *or* category id:
+  - `'hidden'` → gone from the page and the nav.
+  - `'locked'` → **greyed out and non-clickable** in the nav (not on the page) with an "Ingår inte ännu" hint. A deliberate soft upsell: the client sees the shape of what a fuller engagement would add without it being sold aggressively.
+- **`hideEmpty: true`** — drop every section without content (no placeholders) for a finished, client-facing book.
+
+```ts
+visibility: { 'ljud-id': 'hidden', tillampning: 'locked' },
+hideEmpty: true,
+```
 
 ## Sections
 
-Plattform (brand idea/position/values), Tonalitet (tone of voice — principles with do/don't examples and a copyable boilerplate), Logotyper, Färger (click a swatch to copy HEX), Typografi (live specimens), Bildspråk, Rörligt (native `<video>` — the edge over a PDF), Nedladdningar (per-asset + a single "Ladda ner allt" ZIP you pre-build and drop in `public/`).
+Each section has its own component in `src/components/sections/`. Built so far: Positionering (`Platform`), Tonalitet & röst (`Tone` — principles with do/don't and a copyable boilerplate), Logotyp (`LogotypesSection`), Färgpalett (`Colors` — click HEX to copy), Typografi (live specimens), Bildspråk / fotostil (`Imagery`), Rörlig identitet (`Motion` — native `<video>`), Nedladdningsbara assets (`Downloads`, incl. a pre-built "Ladda ner allt" ZIP) and Versionshistorik (renders `changelog`). The rest are stubs that render the placeholder until they're built — build one by replacing its stub, and add its content check to `has` in `pages/index.astro`.
 
 ## For developers & power users
 
@@ -89,12 +96,14 @@ Dependencies: `astro`, `tailwindcss`, `@tailwindcss/vite`. Client JS is a small 
 
 ```
 src/
-  content/profile.ts          the entire content model + categories + sample client (the one file you edit)
+  content/categories.ts       the template structure: 5 categories, 28 numbered sections
+  content/profile.ts          the content model + per-client visibility + sample client (the file you edit)
   lib/strings.ts              UI copy (Swedish default)
   layouts/BrandbookLayout.astro
-  components/SideNav.astro     the category accordion (active / hidden / locked)
-  components/sections/         Cover, Platform, Tone, Logos, Colors, Typography, Imagery, Motion, Downloads
-  pages/index.astro           assembles present sections + builds the nav + categories
+  components/SideNav.astro     the category accordion (shown / hidden / locked)
+  components/SectionHead.astro numbered section heading ("10 — Visuell identitet")
+  components/sections/         one component per section; unbuilt ones render Placeholder.astro
+  pages/index.astro           resolves visibility, builds the nav, renders sections in order
   scripts/enhance.ts          active-nav, category accordion, copy, print, mobile menu
   styles/global.css           neutral chrome + section styles + print stylesheet
 public/assets/                logos / fonts / imagery / motion / templates + the download-all ZIP

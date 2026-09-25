@@ -1,15 +1,12 @@
 ---
-import { t } from '../../lib/strings';
+import SectionHead from '../SectionHead.astro';
 import type { ImageItem } from '../../content/profile';
 interface Props { note?: string; images: ImageItem[]; }
 const { note, images } = Astro.props;
 ---
 <section class="section" id="imagery">
   <div class="wrap">
-    <div class="section__head">
-      <h2 class="section__title" data-reveal>{t.sections.imagery}</h2>
-      {note && <p class="section__note">{note}</p>}
-    </div>
+    <SectionHead id="imagery" note={note} />
   </div>
 
   <div class="imagery bleedgrid">

@@ -1,16 +1,16 @@
 /* ============================================================================
    THE CONTENT MODEL
-   One deployment = one client. Everything the brandbook shows comes from this
-   single object + the `categories` list below.
+   One deployment = one client. The STRUCTURE (5 categories, 28 numbered
+   sections) is fixed in ./categories.ts; this object is the client's CONTENT
+   plus what to show of that structure.
 
-   SCALE FROM TINY TO HUGE, TWO WAYS:
-   - A section with no content simply doesn't render.
-   - A CATEGORY controls whether a whole group shows, hides, or teases:
-       • omit it from `categories`      → hidden (a clean, minimal brandbook)
-       • include it, no `locked`         → active & expandable
-       • include it with `locked: true`  → greyed, non-clickable teaser in the
-         sidebar (an upsell cue: "should we have done the rest too?")
+   WHAT SHOWS — granular, per client:
+   - Default: every section renders; one without content shows a placeholder.
+   - `visibility`: per section OR category id → 'hidden' (gone) or 'locked'
+     (greyed, non-clickable teaser in the sidebar — an upsell cue).
+   - `hideEmpty: true`: drop every section without content (no placeholders).
    ========================================================================== */
+import type { Visibility } from './categories';
 
 export interface DownloadFile { label: string; href: string; size?: string; }
 
@@ -30,9 +30,9 @@ export interface DownloadGroup { group: string; items: DownloadFile[]; }
    and this makes that visible (the edge over a PDF someone downloaded months ago). */
 export interface ChangeEntry { date: string; note: string; }
 
-/* Kärnan */
+/* 5 Positionering */
 export interface PlatformBlock { title: string; body: string; }
-/* Röst */
+/* 7 Tonalitet & röst */
 export interface TonePrinciple { name: string; description: string; do?: string; dont?: string; }
 export interface Tone { intro?: string; principles: TonePrinciple[]; boilerplate?: string; }
 
@@ -44,8 +44,8 @@ export interface Profile {
   cover?: { note?: string; background?: string };
   downloadAllHref?: string;
 
-  platform: PlatformBlock[];      // Kärnan
-  tone?: Tone;                    // Röst
+  platform: PlatformBlock[];      // 5 Positionering
+  tone?: Tone;                    // 7 Tonalitet & röst
   logos: Logo[];
   colors: Color[];
   typography: Typeface[];
@@ -53,11 +53,14 @@ export interface Profile {
   motion: MotionItem[];
   downloads: DownloadGroup[];
   changelog?: ChangeEntry[];      // optional; shows a "living document" history
+
+  visibility?: Visibility;        // per section/category: 'hidden' | 'locked'
+  hideEmpty?: boolean;            // true → no placeholders for empty sections
 }
 
-/* The sidebar structure (categories) moved to ./categories.ts — it's agency
-   structure, not per-client content. Re-export so existing imports still work. */
-export { categories, type NavCategory } from './categories';
+/* The template structure lives in ./categories.ts — it's agency structure, not
+   per-client content. Re-exported for convenience. */
+export { categories, type CategoryDef, type SectionDef } from './categories';
 
 /* ----------------------------------------------------------------------------
    PROFILE — the LOCAL fallback content (used when no CMS is configured).
@@ -65,8 +68,8 @@ export { categories, type NavCategory } from './categories';
    Colours + typeface + positioning copy are the real items from that file.
    Logo/imagery are PLACEHOLDERS (the Figma asset host is unreachable from here)
    — replace `public/assets/logos/*` and `public/assets/imagery/*` with the real
-   exports. Tone-of-voice and motion aren't in the source file, so those two
-   sections are omitted and their categories (Röst) simply don't render.
+   exports. Tone-of-voice and motion aren't in the source file, so those
+   sections (and every other unfilled one) show as placeholders.
    Note: UI chrome is Swedish by default (src/lib/strings.ts) while this brand's
    content is English — flip strings.ts to English for an all-English deploy.
    -------------------------------------------------------------------------- */
@@ -146,6 +149,11 @@ export const profile: Profile = {
       { label: 'General Sans (Fontshare)', href: 'https://www.fontshare.com/fonts/general-sans', size: '—' },
     ] },
   ],
+
+  // What to show of the template. Default: all 28 sections, empty ones as
+  // placeholders. Examples:
+  //   visibility: { 'ljud-id': 'hidden', tillampning: 'locked' },
+  //   hideEmpty: true,   // client-facing: only sections with content
 
   changelog: [
     { date: '2026-09-19', note: 'Live stress-test — this line was edited, rebuilt and pushed to the live page to prove the update loop.' },

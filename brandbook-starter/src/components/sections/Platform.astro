@@ -1,14 +1,12 @@
 ---
-import { t } from '../../lib/strings';
+import SectionHead from '../SectionHead.astro';
 import type { PlatformBlock } from '../../content/profile';
 interface Props { platform: PlatformBlock[]; }
 const { platform } = Astro.props;
 ---
-<section class="section" id="plattform">
+<section class="section" id="positionering">
   <div class="wrap">
-    <div class="section__head">
-      <h2 class="section__title" data-reveal>{t.sections.plattform}</h2>
-    </div>
+    <SectionHead id="positionering" />
     <div class="platform">
       {platform.map((b) => (
         <div class="platform__block" data-reveal>

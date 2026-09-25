@@ -1,4 +1,5 @@
 ---
+import SectionHead from '../SectionHead.astro';
 import { t } from '../../lib/strings';
 import type { Tone } from '../../content/profile';
 interface Props { tone: Tone; }
@@ -6,10 +7,7 @@ const { tone } = Astro.props;
 ---
 <section class="section" id="tonalitet">
   <div class="wrap">
-    <div class="section__head">
-      <h2 class="section__title" data-reveal>{t.sections.tonalitet}</h2>
-      {tone.intro && <p class="section__note">{tone.intro}</p>}
-    </div>
+    <SectionHead id="tonalitet" note={tone.intro} />
 
     <div class="tone">
       {tone.principles.map((pr) => (

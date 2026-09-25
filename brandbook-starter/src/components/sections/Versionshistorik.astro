@@ -1,0 +1,19 @@
+---
+import SectionHead from '../SectionHead.astro';
+import type { ChangeEntry } from '../../content/profile';
+interface Props { changelog: ChangeEntry[]; }
+const { changelog } = Astro.props;
+---
+<section class="section" id="versionshistorik">
+  <div class="wrap">
+    <SectionHead id="versionshistorik" note="Sidan är alltid den senaste versionen — här syns vad som ändrats." />
+    <ol class="history">
+      {changelog.map((c) => (
+        <li class="history__item" data-reveal>
+          <time class="history__date" datetime={c.date}>{c.date}</time>
+          <p class="history__note">{c.note}</p>
+        </li>
+      ))}
+    </ol>
+  </div>
+</section>

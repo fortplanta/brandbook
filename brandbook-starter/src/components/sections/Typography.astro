@@ -1,4 +1,5 @@
 ---
+import SectionHead from '../SectionHead.astro';
 import { t } from '../../lib/strings';
 import type { Typeface } from '../../content/profile';
 interface Props { typography: Typeface[]; }
@@ -7,9 +8,7 @@ const pangram = 'Yxskaftbud, ge vår WC-zonmö IQ-hjälp.';
 ---
 <section class="section" id="typography">
   <div class="wrap">
-  <div class="section__head">
-    <h2 class="section__title" data-reveal>{t.sections.typography}</h2>
-  </div>
+  <SectionHead id="typography" />
 
   {typography.map((face) => (
     <div class="type" data-reveal>

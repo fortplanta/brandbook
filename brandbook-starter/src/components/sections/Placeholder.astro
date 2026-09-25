@@ -1,0 +1,20 @@
+---
+/* A template section with no content yet: numbered heading + what belongs here.
+   Rendered for any section that isn't filled (hide them all per client with
+   `hideEmpty` in profile.ts). */
+import SectionHead from '../SectionHead.astro';
+import { sectionById } from '../../content/categories';
+import { t } from '../../lib/strings';
+interface Props { id: string; }
+const { id } = Astro.props;
+const def = sectionById.get(id);
+---
+<section class="section section--empty" id={id}>
+  <div class="wrap">
+    <SectionHead id={id} />
+    <div class="placeholder" data-reveal>
+      <span class="placeholder__tag">{t.placeholder.tag}</span>
+      {def && <p class="placeholder__about">{def.about}</p>}
+    </div>
+  </div>
+</section>

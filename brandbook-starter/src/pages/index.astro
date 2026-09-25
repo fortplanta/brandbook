@@ -2,24 +2,51 @@
 import BrandbookLayout from '../layouts/BrandbookLayout.astro';
 import SideNav from '../components/SideNav.astro';
 import Cover from '../components/sections/Cover.astro';
+import Placeholder from '../components/sections/Placeholder.astro';
+// I. Varumärkesplattform
+import Introduktion from '../components/sections/Introduktion.astro';
+import VisionMission from '../components/sections/VisionMission.astro';
+import Karnvarden from '../components/sections/Karnvarden.astro';
+import Manifest from '../components/sections/Manifest.astro';
 import Platform from '../components/sections/Platform.astro';
+import Personlighet from '../components/sections/Personlighet.astro';
 import Tone from '../components/sections/Tone.astro';
+import BrandStory from '../components/sections/BrandStory.astro';
+import Malgrupper from '../components/sections/Malgrupper.astro';
+// II. Visuell identitet
 import LogotypesSection from '../components/sections/LogotypesSection.astro';
 import Colors from '../components/sections/Colors.astro';
 import Typography from '../components/sections/Typography.astro';
+import GrafiskaElement from '../components/sections/GrafiskaElement.astro';
 import Imagery from '../components/sections/Imagery.astro';
+import LayoutGrid from '../components/sections/LayoutGrid.astro';
+import Ikonografi from '../components/sections/Ikonografi.astro';
+import Illustration from '../components/sections/Illustration.astro';
+// III. Rörligt & ljud
 import Motion from '../components/sections/Motion.astro';
+import Video from '../components/sections/Video.astro';
+import LjudId from '../components/sections/LjudId.astro';
+// IV. Tillämpning
+import Digitalt from '../components/sections/Digitalt.astro';
+import Print from '../components/sections/Print.astro';
+import CoBranding from '../components/sections/CoBranding.astro';
+import Merch from '../components/sections/Merch.astro';
+import Exempel from '../components/sections/Exempel.astro';
+// V. Resurser & governance
 import Downloads from '../components/sections/Downloads.astro';
-import { categories } from '../content/categories';
+import Kontakt from '../components/sections/Kontakt.astro';
+import Versionshistorik from '../components/sections/Versionshistorik.astro';
+import { resolveStructure } from '../content/categories';
 import { loadProfile } from '../lib/loadProfile';
-import { t } from '../lib/strings';
 
 // Content source: local file, or the CMS when PAYLOAD_URL is set. Same shape.
 const profile = await loadProfile();
 
-// Which sections actually have content?
+// Sections backed by client content. Sections not listed here have no content
+// model yet — they're filled once their component is built (they render the
+// placeholder until then).
 const has: Record<string, boolean> = {
-  plattform: (profile.platform?.length ?? 0) > 0,
+  positionering: (profile.platform?.length ?? 0) > 0,
   tonalitet: (profile.tone?.principles?.length ?? 0) > 0,
   logos: profile.logos?.length > 0,
   colors: profile.colors?.length > 0,
@@ -27,24 +54,22 @@ const has: Record<string, boolean> = {
   imagery: (profile.imagery?.images?.length ?? 0) > 0,
   motion: profile.motion?.length > 0,
   downloads: profile.downloads?.length > 0,
+  versionshistorik: (profile.changelog?.length ?? 0) > 0,
 };
 
-// Build the sidebar model: keep locked categories (teasers); for active ones,
-// keep only sections that have content, and drop the category if it ends up empty.
-const nav = categories
-  .map((cat) => {
-    if (cat.locked) return { id: cat.id, label: cat.label, locked: true, items: [] };
-    const items = (cat.sections ?? [])
-      .filter((id) => has[id])
-      .map((id) => ({ id, label: t.sections[id] }));
-    return { id: cat.id, label: cat.label, items };
-  })
-  .filter((cat) => cat.locked || cat.items.length > 0);
+// Apply the client's visibility settings to the template structure.
+const structure = resolveStructure((id) => Boolean(has[id]), profile.visibility, profile.hideEmpty);
 
-// The ordered list of active sections to render in the page.
-const activeSections = categories
-  .filter((c) => !c.locked)
-  .flatMap((c) => (c.sections ?? []).filter((id) => has[id]));
+// Sidebar model: locked categories/sections stay as greyed teasers.
+const nav = structure.map((cat) => ({
+  id: cat.id,
+  label: cat.label,
+  locked: cat.locked,
+  items: cat.sections.map((s) => ({ id: s.id, label: s.label, locked: s.locked })),
+}));
+
+// The ordered sections to render on the page (locked ones only tease in the nav).
+const sections = structure.flatMap((cat) => cat.sections.filter((s) => !s.locked));
 ---
 
 <BrandbookLayout title={`${profile.client} — Brandbook`} description={profile.tagline} accent={profile.accent}>
@@ -59,16 +84,41 @@ const activeSections = categories
 
   <Cover client={profile.client} tagline={profile.tagline} note={profile.cover?.note} />
 
-  {activeSections.map((id) => (
+  {sections.map(({ id, filled }) => (
     <>
-      {id === 'plattform' && <Platform platform={profile.platform} />}
-      {id === 'tonalitet' && profile.tone && <Tone tone={profile.tone} />}
-      {id === 'logos' && <LogotypesSection />}
-      {id === 'colors' && <Colors colors={profile.colors} typography={profile.typography} />}
-      {id === 'typography' && <Typography typography={profile.typography} />}
-      {id === 'imagery' && <Imagery note={profile.imagery.note} images={profile.imagery.images} />}
-      {id === 'motion' && <Motion motion={profile.motion} />}
-      {id === 'downloads' && <Downloads downloads={profile.downloads} downloadAllHref={profile.downloadAllHref} />}
+      {/* I. Varumärkesplattform */}
+      {id === 'introduktion' && <Introduktion />}
+      {id === 'vision-mission' && <VisionMission />}
+      {id === 'karnvarden' && <Karnvarden />}
+      {id === 'manifest' && <Manifest />}
+      {id === 'positionering' && (filled ? <Platform platform={profile.platform} /> : <Placeholder id={id} />)}
+      {id === 'personlighet' && <Personlighet />}
+      {id === 'tonalitet' && (filled && profile.tone ? <Tone tone={profile.tone} /> : <Placeholder id={id} />)}
+      {id === 'brand-story' && <BrandStory />}
+      {id === 'malgrupper' && <Malgrupper />}
+      {/* II. Visuell identitet */}
+      {id === 'logos' && (filled ? <LogotypesSection /> : <Placeholder id={id} />)}
+      {id === 'colors' && (filled ? <Colors colors={profile.colors} typography={profile.typography} /> : <Placeholder id={id} />)}
+      {id === 'typography' && (filled ? <Typography typography={profile.typography} /> : <Placeholder id={id} />)}
+      {id === 'grafiska-element' && <GrafiskaElement />}
+      {id === 'imagery' && (filled ? <Imagery note={profile.imagery.note} images={profile.imagery.images} /> : <Placeholder id={id} />)}
+      {id === 'layout-grid' && <LayoutGrid />}
+      {id === 'ikonografi' && <Ikonografi />}
+      {id === 'illustration' && <Illustration />}
+      {/* III. Rörligt & ljud */}
+      {id === 'motion' && (filled ? <Motion motion={profile.motion} /> : <Placeholder id={id} />)}
+      {id === 'video' && <Video />}
+      {id === 'ljud-id' && <LjudId />}
+      {/* IV. Tillämpning */}
+      {id === 'digitalt' && <Digitalt />}
+      {id === 'print' && <Print />}
+      {id === 'co-branding' && <CoBranding />}
+      {id === 'merch' && <Merch />}
+      {id === 'exempel' && <Exempel />}
+      {/* V. Resurser & governance */}
+      {id === 'downloads' && (filled ? <Downloads downloads={profile.downloads} downloadAllHref={profile.downloadAllHref} /> : <Placeholder id={id} />)}
+      {id === 'kontakt' && <Kontakt />}
+      {id === 'versionshistorik' && (filled ? <Versionshistorik changelog={profile.changelog ?? []} /> : <Placeholder id={id} />)}
     </>
   ))}
 </BrandbookLayout>

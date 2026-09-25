@@ -17,7 +17,7 @@
   --pad: clamp(1.25rem, 4vw, 4rem);
   --gutter: clamp(1.25rem, 4vw, 3.5rem); /* one consistent section gutter */
   --rail: 60px;             /* minimized drawer width */
-  --drawer: 250px;          /* expanded drawer width */
+  --drawer: 280px;          /* expanded drawer width */
   --drawer-x: clamp(1rem, 2.5vw, 1.5rem);  /* drawer inset from the edge */
   --nav-pad: 0.8rem;        /* drawer inner padding */
 }
@@ -67,6 +67,26 @@ img, video { display: block; max-width: 100%; }
 .section__eyebrow { font-size: 0.75rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-muted); margin: 0 0 0.6rem; }
 .section__title { font-size: clamp(1.7rem, 4.5vw, 2.9rem); }
 .section__note { color: var(--color-muted); max-width: 48ch; margin: 1rem 0 0; font-size: 1.05rem; line-height: 1.55; }
+
+/* Template section with no content yet (Placeholder.astro). */
+.section--empty .section__head { margin-bottom: 1.25rem; }
+.placeholder {
+  max-width: 44rem; padding: 1.25rem 1.4rem; border: 1.5px dashed var(--color-line); border-radius: 14px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem;
+}
+.placeholder__tag {
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-muted);
+  background: var(--color-sink); border-radius: 999px; padding: 0.2rem 0.6rem;
+}
+.placeholder__about { margin: 0; color: var(--color-muted); line-height: 1.55; }
+
+/* 28 Versionshistorik */
+.history { list-style: none; margin: 0; padding: 0; max-width: 44rem; }
+.history__item { display: grid; grid-template-columns: 7.5rem 1fr; gap: 1rem; padding: 0.9rem 0; border-top: 1px solid var(--color-line); }
+.history__item:first-child { border-top: 0; }
+.history__date { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-muted); padding-top: 0.1rem; }
+.history__note { margin: 0; line-height: 1.5; }
+@media (max-width: 560px) { .history__item { grid-template-columns: 1fr; gap: 0.2rem; } }
 
 /* Media grids now align to the section gutter like everything else. */
 .bleedgrid { padding-inline: 0; }
@@ -218,7 +238,7 @@ html.js .nav__search {
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 22%, transparent);
 }
 .nav__link:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-.nav__linklabel { max-width: 8rem; overflow: hidden; }
+.nav__linklabel { max-width: 13rem; overflow: hidden; text-overflow: ellipsis; }
 
 /* ---- Categories (accordion groups) ---- */
 .cat__head {
@@ -238,7 +258,7 @@ html.js .nav__search {
   border: 1.5px solid var(--color-muted); background: transparent; opacity: 0.6;
   transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
 }
-.cat__label { flex: 1; max-width: 9rem; overflow: hidden; transition: max-width 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease; }
+.cat__label { flex: 1; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; transition: max-width 0.35s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease; }
 .cat__chev { flex: none; width: 15px; height: 15px; color: var(--color-muted); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1), opacity 0.3s ease, max-width 0.35s ease; }
 .cat[data-open="true"] .cat__chev { transform: rotate(180deg); }
 .cat[data-active] .cat__dot { background: var(--color-brand); border-color: var(--color-brand); opacity: 1; box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-brand) 22%, transparent); }
@@ -261,6 +281,8 @@ html.js .cat[data-open="true"] .cat__list { height: var(--cat-h, auto); }
 /* locked / teaser category — greyed, non-interactive upsell cue */
 .cat--locked .cat__head { color: var(--color-muted); cursor: default; opacity: 0.72; }
 .cat--locked .cat__dot { opacity: 0.35; }
+.nav__link--locked { cursor: default; opacity: 0.5; }
+@media (hover: hover) and (pointer: fine) { .nav__link--locked:hover { color: var(--color-muted); background: none; } }
 .cat__hint { font-size: 0.68rem; color: var(--color-muted); margin-left: auto; white-space: nowrap; transition: opacity 0.3s ease, max-width 0.35s ease; }
 .cat__lock { flex: none; width: 13px; height: 13px; color: var(--color-muted); opacity: 0.7; transition: opacity 0.3s ease, max-width 0.35s ease; }
 

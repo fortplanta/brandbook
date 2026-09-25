@@ -1,0 +1,14 @@
+---
+/* Numbered section heading: "10 — Visuell identitet" eyebrow + title, both
+   taken from the template structure (src/content/categories.ts). */
+import { sectionById } from '../content/categories';
+interface Props { id: string; note?: string; }
+const { id, note } = Astro.props;
+const def = sectionById.get(id);
+---
+<div class="section__head">
+  {def && <p class="section__eyebrow">{def.n} — {def.category.label}</p>}
+  <h2 class="section__title" data-reveal>{def?.label ?? id}</h2>
+  {note && <p class="section__note">{note}</p>}
+  <slot />
+</div>

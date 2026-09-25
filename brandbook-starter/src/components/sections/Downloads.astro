@@ -1,4 +1,5 @@
 ---
+import SectionHead from '../SectionHead.astro';
 import { t } from '../../lib/strings';
 import type { DownloadGroup } from '../../content/profile';
 interface Props { downloads: DownloadGroup[]; downloadAllHref?: string; }
@@ -6,12 +7,11 @@ const { downloads, downloadAllHref } = Astro.props;
 ---
 <section class="section" id="downloads">
   <div class="wrap">
-  <div class="section__head">
-    <h2 class="section__title" data-reveal>{t.sections.downloads}</h2>
+  <SectionHead id="downloads">
     {downloadAllHref && (
       <p style="margin-top:1rem"><a class="btn btn--solid" href={downloadAllHref} download>{t.actions.downloadAll}</a></p>
     )}
-  </div>
+  </SectionHead>
 
   {downloads.map((g) => (
     <div class="dl-group" data-reveal>

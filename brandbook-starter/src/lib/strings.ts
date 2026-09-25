@@ -1,19 +1,17 @@
 /* UI strings — all chrome copy in one place. Swedish by default (matches the
    Oh My brief); swap this object for English and the whole UI switches. Client
    CONTENT lives in profile.ts, not here. */
+import { categories } from '../content/categories';
+
 export const t = {
-  /* Section titles, keyed by section id (used in the nav sub-lists and the
-     section headings). Category NAMES live in profile.ts (categories[].label). */
-  sections: {
-    plattform: 'Plattform',
-    tonalitet: 'Tonalitet',
-    logos: 'Logotyper',
-    colors: 'Färger',
-    typography: 'Typografi',
-    imagery: 'Bildspråk',
-    motion: 'Rörligt',
-    downloads: 'Nedladdningar',
-  } as Record<string, string>,
+  /* Section titles, keyed by section id — derived from the template structure
+     (src/content/categories.ts), which is the single source for names/order. */
+  sections: Object.fromEntries(
+    categories.flatMap((c) => c.sections.map((s) => [s.id, s.label]))
+  ) as Record<string, string>,
+  placeholder: {
+    tag: 'Innehåll saknas',               // shown on sections with no content yet
+  },
   actions: {
     download: 'Ladda ner',
     downloadAll: 'Ladda ner allt (ZIP)',
@@ -52,7 +50,7 @@ export const t = {
   },
   locked: {
     hint: 'Ingår inte ännu',              // shown on greyed teaser categories
-    aria: 'Låst kategori — ingår inte i den här profilen ännu',
+    aria: 'Låst — ingår inte i den här profilen ännu',
   },
   meta: {
     updated: 'Uppdaterad',

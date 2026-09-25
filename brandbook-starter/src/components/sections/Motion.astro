@@ -1,4 +1,5 @@
 ---
+import SectionHead from '../SectionHead.astro';
 import { t } from '../../lib/strings';
 import type { MotionItem } from '../../content/profile';
 interface Props { motion: MotionItem[]; }
@@ -6,10 +7,7 @@ const { motion } = Astro.props;
 ---
 <section class="section" id="motion">
   <div class="wrap">
-    <div class="section__head">
-      <h2 class="section__title" data-reveal>{t.sections.motion}</h2>
-      <p class="section__note">Rörligt material spelar direkt i sidan — fördelen mot en statisk PDF.</p>
-    </div>
+    <SectionHead id="motion" note="Rörligt material spelar direkt i sidan — fördelen mot en statisk PDF." />
   </div>
 
   <div class="motion bleedgrid">

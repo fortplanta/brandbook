@@ -2,7 +2,7 @@
 import { t } from '../lib/strings';
 import type { ChangeEntry } from '../content/profile';
 
-interface NavItem { id: string; label: string; }
+interface NavItem { id: string; label: string; locked?: boolean; }
 interface NavCat { id: string; label: string; locked?: boolean; items: NavItem[]; }
 interface Props {
   client: string;
@@ -56,9 +56,15 @@ const initial = client.trim().charAt(0).toUpperCase();
               <ul>
                 {cat.items.map((it) => (
                   <li>
-                    <a class="nav__link" href={`#${it.id}`} data-nav-link={it.id}>
-                      <span class="nav__linklabel">{it.label}</span>
-                    </a>
+                    {it.locked ? (
+                      <span class="nav__link nav__link--locked" aria-disabled="true" title={t.locked.aria}>
+                        <span class="nav__linklabel">{it.label}</span>
+                      </span>
+                    ) : (
+                      <a class="nav__link" href={`#${it.id}`} data-nav-link={it.id}>
+                        <span class="nav__linklabel">{it.label}</span>
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
