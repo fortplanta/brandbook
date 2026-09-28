@@ -1,0 +1,136 @@
+---
+/* Chapter hero — a full-screen break that opens each category before its
+   sections: numeral, title, lede, a table of contents and an effect themed to
+   the category. Behaviour modelled on the "perfect union" mask at
+   car.capricorngroup.net (driven by enhance.ts):
+     • Mask — while the block is low on screen only a centred window (~39%
+       wide) shows; as it rises the window opens sideways to full-bleed,
+       fully open when the block reaches the top. Done with two paper
+       curtains that slide out (transform only) rather than an animated
+       clip-path, so it needs no repaint per frame.
+     • Lag — the stage trails the scroll by up to 25% of its height and eases
+       into place as it arrives.
+     • Parallax — the effect layer moves at a slower rate inside the window.
+     • Text — once the window is nearly open, the kicker, the title (word by
+       word out of a mask), lede and contents stagger in (timed, once).
+   No pinning: after opening it scrolls away like any section. Loops run only
+   while on screen (.is-live). Without JS / with reduced motion: no mask, no
+   lag, static composition. */
+import type { ResolvedCategory } from '../content/categories';
+import type { Color, DownloadGroup, ChangeEntry } from '../content/profile';
+
+interface Props {
+  category: ResolvedCategory;
+  colors?: Color[];            // II — the client's palette becomes the bands
+  downloads?: DownloadGroup[]; // V  — real files feed the ledger
+  changelog?: ChangeEntry[];   // V  — …and real history
+}
+const { category, colors = [], downloads = [], changelog = [] } = Astro.props;
+const shown = category.sections.filter((s) => !s.locked);
+const pad = (n: number) => String(n).padStart(2, '0');
+
+// Entrance timeline (ms). Stagger steps follow the 30–80ms rule; the title,
+// as the one big marketing moment, gets the longest step.
+const words = category.label.split(' ');
+const T_TITLE = 90, STEP_WORD = 70;
+const T_LEDE = T_TITLE + words.length * STEP_WORD + 140;
+const T_TOC = T_LEDE + 160, STEP_TOC = 40;
+
+// Table of contents, by group (non-clickable labels), with a running stagger index.
+let running = 0;
+const tocGroups = category.groups
+  .map((g) => ({ label: g.label, sections: g.sections.filter((x) => !x.locked) }))
+  .filter((g) => g.sections.length > 0)
+  .map((g) => { const start = running; running += g.sections.length + 1; return { ...g, start }; });
+
+// II — palette bands (fallback: greys, so the effect still reads pre-content)
+const bands = (colors.length ? colors.map((c) => c.hex) : ['#2a2a2e', '#3a3a40', '#55555c', '#77777f', '#9a9aa2']).slice(0, 9);
+
+// III — waveform: deterministic pseudo-random heights/speeds per bar
+const bars = Array.from({ length: 44 }, (_, i) => ({
+  h: 0.25 + ((i * 37) % 71) / 100,
+  d: (0.8 + ((i * 13) % 9) * 0.11).toFixed(2),
+  o: (-((i * 29) % 17) * 0.09).toFixed(2),
+}));
+
+// IV — real-world format outlines (w in vmin, aspect ratio, position, depth)
+const frames = [
+  { label: 'Visitkort 85×55',   w: 16, ar: '85 / 55',  x: 58, y: 16, k: 30 },
+  { label: 'Mobil 9:19.5',      w: 11, ar: '9 / 19.5', x: 82, y: 10, k: 70 },
+  { label: 'Affisch A3',        w: 17, ar: '1 / 1.414', x: 68, y: 44, k: 50 },
+  { label: 'Roll-up 85×200',    w: 9,  ar: '85 / 200', x: 90, y: 50, k: 95 },
+  { label: 'Skärm 16:10',       w: 22, ar: '16 / 10',  x: 50, y: 58, k: 20 },
+];
+
+// V — ledger lines from the client's real files and history
+const files = downloads.flatMap((g) => g.items.map((it) => `${g.group.toLowerCase()} / ${it.label}${it.size && it.size !== '—' ? ` · ${it.size}` : ''}`));
+const history = changelog.map((c) => `${c.date} · ${c.note}`);
+const ledger = [...files, ...history];
+const source = ledger.length ? ledger : ['logotyper / primär.svg', 'typsnitt / licens.pdf', 'mallar / presentation.pptx', 'färger / palett.ase', 'v1.0 · första versionen'];
+const lines: string[] = [];
+while (lines.length < 24) lines.push(...source);   // tall enough to fill the hero; doubled below for a seamless loop
+---
+<section class={`chapter chapter--${category.id}`} id={`kapitel-${category.id}`} data-chapter={category.id} aria-labelledby={`kapitel-${category.id}-title`}>
+  <div class="chapter__stage">
+  <div class="chapter__fx" aria-hidden="true">
+    {category.id === 'varumarkesplattform' && (
+      <div class="fx-rings">
+        {[0, 1, 2, 3, 4, 5].map((i) => <span class="fx-rings__ring" style={`--i:${i}`}></span>)}
+        <span class="fx-rings__core"></span>
+      </div>
+    )}
+    {category.id === 'visuell-identitet' && (
+      <div class="fx-bands">
+        {bands.map((hex, i) => <span class="fx-bands__band" style={`--i:${i};background:${hex}`}></span>)}
+      </div>
+    )}
+    {category.id === 'rorligt-ljud' && (
+      <div class="fx-wave">
+        {bars.map((b, i) => <span class:list={['fx-wave__bar', i % 11 === 4 && 'is-accent']} style={`--h:${b.h};--d:${b.d}s;--o:${b.o}s`}></span>)}
+      </div>
+    )}
+    {category.id === 'tillampning' && (
+      <div class="fx-frames">
+        {frames.map((f) => (
+          <span class="fx-frames__frame" style={`--w:${f.w}vmin;aspect-ratio:${f.ar};left:${f.x}%;top:${f.y}%;--k:${f.k}`}>
+            <em>{f.label}</em>
+          </span>
+        ))}
+      </div>
+    )}
+    {category.id === 'resurser' && (
+      <div class="fx-ledger">
+        <ul class="fx-ledger__track">
+          {[...lines, ...lines].map((l) => <li>{l}</li>)}
+        </ul>
+      </div>
+    )}
+  </div>
+
+  <div class="chapter__inner">
+    <p class="chapter__kicker chapter__in" style="--d:0ms">Kapitel {category.roman} · {shown.length} {shown.length === 1 ? 'sektion' : 'sektioner'}</p>
+    <h2 class="chapter__title" id={`kapitel-${category.id}-title`} aria-label={category.label}>
+      {words.map((w, i) => (
+        <span class="chapter__word" aria-hidden="true"><span class="chapter__wordin" style={`--d:${T_TITLE + i * STEP_WORD}ms`}>{w}</span></span>
+      ))}
+    </h2>
+    <p class="chapter__lede chapter__in" style={`--d:${T_LEDE}ms`}>{category.intro}</p>
+    <div class="chapter__toc">
+      <span class="chapter__rule chapter__in" style={`--d:${T_TOC - 80}ms`} aria-hidden="true"></span>
+      {tocGroups.map((g) => (
+        <div class="chapter__tocgroup">
+          <span class="chapter__toclabel chapter__in" style={`--d:${T_TOC + g.start * STEP_TOC}ms`}>{g.label}</span>
+          <ol>
+            {g.sections.map((s, j) => (
+              <li class="chapter__in" style={`--d:${T_TOC + (g.start + j + 1) * STEP_TOC}ms`}><a href={`#${s.id}`}><span class="chapter__tocnum">{pad(s.n)}</span>{s.label}</a></li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <span class="chapter__curtain chapter__curtain--l" aria-hidden="true"></span>
+  <span class="chapter__curtain chapter__curtain--r" aria-hidden="true"></span>
+  </div>
+</section>

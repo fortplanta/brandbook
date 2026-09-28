@@ -1,0 +1,24 @@
+---
+/* Resource block — the "take this with you" moment that closes a section with
+   downloadable or copyable material (tokens, logo files, fonts, templates).
+   Deliberately inverted (ink panel, paper text) so it can't be mistaken for
+   content, and identical in every section so people learn the pattern.
+   Actions go in the default slot — use <a class="rbtn"> for downloads and
+   <button class="rbtn" data-copy-text> for copy actions (with a
+   [data-copy-label] span so the label can confirm "Kopierat"). */
+interface Props { title: string; hint?: string; kind?: 'code' | 'download' }
+const { title, hint, kind = 'download' } = Astro.props;
+---
+<aside class="resource" data-reveal>
+  <span class="resource__icon" aria-hidden="true">
+    {kind === 'code'
+      ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m8 7-5 5 5 5"/><path d="m16 7 5 5-5 5"/><path d="m13.5 4-3 16"/></svg>
+      : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>}
+  </span>
+  <div class="resource__text">
+    <p class="resource__kicker">Resurs</p>
+    <h3 class="resource__title">{title}</h3>
+    {hint && <p class="resource__hint">{hint}</p>}
+  </div>
+  <div class="resource__actions"><slot /></div>
+</aside>

@@ -1,0 +1,20 @@
+---
+/* "In use" marquee — an endless track of media tiles. The set is rendered
+   twice (the copy is aria-hidden) so the loop is seamless; enhance.ts runs it
+   as a compositor animation and eases its speed way down while a tile is
+   hovered. Without JS / reduced motion it's a plain horizontal scroller. */
+import type { MediaItem, Color } from '../../content/profile';
+import Media from './Media.astro';
+interface Props { items: MediaItem[]; colors: Color[]; client: string; text: string; label: string }
+const { items, colors, client, text, label } = Astro.props;
+---
+<div class="cg-marquee" data-marquee role="region" aria-label={label}>
+  <div class="cg-marquee__track" data-marquee-track>
+    {items.map((item) => (
+      <div class="cg-marquee__item" data-marquee-item><Media item={item} colors={colors} client={client} text={text} /></div>
+    ))}
+    {items.map((item) => (
+      <div class="cg-marquee__item" data-marquee-item aria-hidden="true"><Media item={item} colors={colors} client={client} text={text} /></div>
+    ))}
+  </div>
+</div>

@@ -1,14 +1,17 @@
 ---
-import SectionHead from '../SectionHead.astro';
+import SectionHero from '../SectionHero.astro';
 import { t } from '../../lib/strings';
 import type { Typeface } from '../../content/profile';
 interface Props { typography: Typeface[]; }
 const { typography } = Astro.props;
 const pangram = 'Yxskaftbud, ge vår WC-zonmö IQ-hjälp.';
 ---
-<section class="section" id="typography">
+<section class="section sect" id="typography">
+  <SectionHero id="typography">
+    <div class="shero-glyph" slot="fallback" style={`font-family:${typography[0]?.stack ?? 'inherit'}`}><span>Aa</span></div>
+  </SectionHero>
+  <div class="sect__body">
   <div class="wrap">
-  <SectionHead id="typography" />
 
   {typography.map((face) => (
     <div class="type" data-reveal>
@@ -29,4 +32,5 @@ const pangram = 'Yxskaftbud, ge vår WC-zonmö IQ-hjälp.';
     </div>
   ))}
   </div>
+</div>
 </section>

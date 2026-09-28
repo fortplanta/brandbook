@@ -1,90 +1,174 @@
 ---
-import SectionHead from '../SectionHead.astro';
+/* 11 · Färgpalett — the colour guide. Structure (Figma prototype + Klarna's
+   brand-colors page): section hero → intro (+ optional media) → per palette:
+   swatch cards + "in use" marquee → approved combinations + stories slideshow →
+   tints → colour in context (stages, each with a slideshow) → misuse.
+   Content comes from `colorGuide` in profile.ts; without one, the flat `colors`
+   list becomes a single palette. Grids of 3+ columns stagger in on first
+   reveal ([data-stagger]); marquee, stories and copy are wired in enhance.ts. */
+import SectionHero from '../SectionHero.astro';
+import ResourceBar from '../ResourceBar.astro';
+import CopyGlyph from '../CopyGlyph.astro';
+import Media from '../color/Media.astro';
+import ColorCard from '../color/ColorCard.astro';
+import PairCard from '../color/PairCard.astro';
+import Marquee from '../color/Marquee.astro';
+import Stories from '../color/Stories.astro';
 import { t } from '../../lib/strings';
-import type { Color } from '../../content/profile';
-import type { Typeface } from '../../content/profile';
 import { buildTokens } from '../../lib/tokens';
-import { swatchContrast, paperReference, fmtRatio } from '../../lib/contrast';
-interface Props { colors: Color[]; typography?: Typeface[]; }
-const { colors, typography = [] } = Astro.props;
+import { resolveColor, tintScale, rotateHue, lowestContrastPair, readableOn, mix } from '../../lib/color';
+import type { Color, Typeface, ColorGuide } from '../../content/profile';
 
-const paper = paperReference(colors);
-const contrast = colors.map((c) => swatchContrast(c.hex, paper));
+interface Props { colors: Color[]; typography?: Typeface[]; guide?: ColorGuide; client: string; text: string }
+const { colors, typography = [], guide: given, client, text } = Astro.props;
+
+const guide: ColorGuide = given ?? { palettes: [{ title: 'Palett', colors: colors.map((c) => c.name) }] };
+const res = (ref: string) => resolveColor(ref, colors);
+const palettes = guide.palettes.map((p) => ({ ...p, swatches: p.colors.map(res) }));
+const primary = palettes[0]?.swatches ?? colors;
+const secondary = palettes[1]?.swatches ?? [];
 const tokens = buildTokens(colors, typography);
+const media = { colors, client, text };
 
-const ratingLabel = (r: string) => (r === 'low' ? t.contrast.fail : r);
-const fg = (i: number) => (contrast[i].bestText.color === 'dark' ? '#111113' : '#ffffff');
-const pad = (n: number) => String(n).padStart(2, '0');
+// Tints — the first palette by default.
+const tintColors = (guide.tints?.colors ?? palettes[0]?.colors ?? []).map(res);
+
+// Misuse demos, derived from the client's own palette.
+const [lowA, lowB] = lowestContrastPair(colors);
+const accentA = secondary[secondary.length - 3] ?? primary[0];
+const accentB = secondary[secondary.length - 2] ?? primary[1] ?? primary[0];
+const offBrand = rotateHue(primary[0]?.hex ?? '#3355ff', 150);
+const stripes = [...primary, ...secondary].slice(0, 6);
+
+// Hero fallback: the palette in proportion — primaries wide, secondaries narrow.
+const distribution = [...primary.map((c) => ({ c, w: 3 })), ...secondary.map((c) => ({ c, w: 1 }))];
 ---
-<section class="section section--flush" id="colors">
-  <div class="wrap">
-    <SectionHead id="colors" note="Scrolla genom paletten. Klicka på HEX för att kopiera. Kontrasten visas mot papper (WCAG)." />
-  </div>
+<section class="section sect cg" id="colors">
+  <SectionHero id="colors" title={guide.hero?.title} lede={guide.hero?.lede} media={guide.hero?.media}>
+    <div class="cg-dist" slot="fallback">
+      {distribution.map(({ c, w }) => <span style={`background:${c.hex};flex:${w}`}></span>)}
+    </div>
+  </SectionHero>
 
-  <!-- Colour takeover. When motion is on (html.anim), .colorstory is a tall
-       container and .colorstory__stage pins (position:sticky) for one viewport
-       per colour: the background cross-fades between layers and the matching
-       card fades in — a scroll-hijacked palette walk. Without JS/animation the
-       same cards fall back to a plain vertical stack, each in its own colour,
-       so the palette always reads. -->
-  <div class="colorstory" data-colorstory style={`--count:${colors.length}`}>
-    <div class="colorstory__stage">
-      <div class="colorstory__bgs" aria-hidden="true">
-        {colors.map((c, i) => (
-          <div class:list={['colorstory__bg', i === 0 && 'is-active']} data-bg={i} style={`background:${c.hex}`}></div>
-        ))}
+  <div class="sect__body cg__body">
+    {guide.intro && (
+      <div class="cg-block cg-intro">
+        <p class="cg-intro__lead" data-reveal>{guide.intro.lead}</p>
+        {guide.intro.body && <p class="cg-body" data-reveal>{guide.intro.body}</p>}
+        {guide.intro.media && <Media item={guide.intro.media} {...media} class="cg-showcase" />}
       </div>
+    )}
 
-      <div class="colorstory__dots" aria-hidden="true">
-        {colors.map((c, i) => (
-          <span class:list={['colorstory__dot', i === 0 && 'is-active']} data-dot={i}></span>
-        ))}
+    {palettes.map((p) => (
+      <>
+      <div class="cg-block">
+        <h3 class="cg-h">{p.title}</h3>
+        {p.body && <p class="cg-body">{p.body}</p>}
+        <div class="cg-grid" data-stagger>
+          {p.swatches.map((c, i) => <ColorCard color={c} i={i} />)}
+        </div>
       </div>
+      {p.inUse && (
+        <div class="cg-block">
+          <h3 class="cg-h cg-h--sm">{p.inUse.title}</h3>
+          {p.inUse.body && <p class="cg-body">{p.inUse.body}</p>}
+          <Marquee items={p.inUse.media} {...media} label={p.inUse.title} />
+        </div>
+      )}
+      </>
+    ))}
 
-      <div class="colorstory__cards">
-        {colors.map((c, i) => (
-          <article
-            class:list={['colorpanel', i === 0 && 'is-active']}
-            data-panel={i}
-            data-fg={fg(i)}
-            style={`--c:${c.hex};--fg:${fg(i)}`}
-            aria-label={`${c.name} ${c.hex}`}
-          >
-            <div class="colorpanel__inner">
-              <span class="colorpanel__idx">{pad(i + 1)} <span class="colorpanel__idx-sep">/</span> {pad(colors.length)}</span>
-              <h3 class="colorpanel__name">{c.name}</h3>
-              {c.role && <span class="colorpanel__role">{c.role}</span>}
-              <button class="colorpanel__hex" data-copy={c.hex} type="button" aria-label={`Kopiera ${c.hex}`}>
-                <span data-copy-label>{c.hex}</span>
-                <svg class="colorpanel__copyicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-              </button>
-              <div class="colorpanel__spec">
-                {c.rgb && <span>RGB {c.rgb}</span>}
-                {c.cmyk && <span>CMYK {c.cmyk}</span>}
-                {c.pantone && <span>PMS {c.pantone}</span>}
-              </div>
-              <div class="colorpanel__contrast">
-                <span class:list={['cpill', `cpill--${contrast[i].onPaper.rating}`]}>{ratingLabel(contrast[i].onPaper.rating)} · {t.contrast.onPaper}</span>
-                <span class="cpill">{fmtRatio(contrast[i].onPaper.ratio)}</span>
+
+    {guide.combinations && (
+      <div class="cg-block">
+        <h3 class="cg-h">{guide.combinations.title ?? 'Godkända kombinationer'}</h3>
+        {guide.combinations.body && <p class="cg-body">{guide.combinations.body}</p>}
+        <div class="cg-grid" data-stagger>
+          {guide.combinations.pairs.map((pr, i) => <PairCard bg={res(pr.bg)} fg={res(pr.fg)} note={pr.note} i={i} />)}
+        </div>
+        {guide.combinations.slides?.length && (
+          <Stories slides={guide.combinations.slides} {...media} label={guide.combinations.title ?? 'Godkända kombinationer'} />
+        )}
+      </div>
+    )}
+
+    {tintColors.length > 0 && (
+      <div class="cg-block">
+        <h3 class="cg-h">{guide.tints?.title ?? 'Toner'}</h3>
+        {guide.tints?.body && <p class="cg-body">{guide.tints.body}</p>}
+        <div class="cg-tints">
+          {tintColors.map((c) => (
+            <div class="cg-tints__row">
+              <span class="cg-tints__name">{c.name}</span>
+              <div class="cg-tints__scale" data-stagger>
+                {tintScale(c.hex).map((s, i) => (
+                  <button class:list={['cg-tint', s.step === 500 && 'is-base']} type="button" data-copy={s.hex} style={`--c:${s.hex};--fg:${readableOn(s.hex)};--i:${i}`} aria-label={`${c.name} ${s.step} ${s.hex} — kopiera`}>
+                    <span class="cg-tint__step">{s.step}<CopyGlyph /></span>
+                    <span class="cg-tint__hex" data-copy-label>{s.hex}</span>
+                  </button>
+                ))}
               </div>
             </div>
-          </article>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {guide.context && (
+      <div class="cg-block">
+        <h3 class="cg-h">{guide.context.title ?? 'Färg i sitt sammanhang'}</h3>
+        {guide.context.body && <p class="cg-body">{guide.context.body}</p>}
+        {guide.context.stages.map((st) => (
+          <div class="cg-stage">
+            <div class="cg-stage__head">
+              <h4 class="cg-stage__label">{st.label}</h4>
+              {st.body && <p class="cg-stage__body">{st.body}</p>}
+            </div>
+            <Stories slides={st.slides} {...media} label={st.label} />
+          </div>
         ))}
       </div>
-    </div>
-  </div>
+    )}
 
-  <div class="wrap">
-    <div class="tokens" data-tokens>
-      <div class="tokens__head">
-        <span class="tokens__label">{t.tokens.label}</span>
-        <span class="tokens__hint">{t.tokens.hint}</span>
+    {guide.misuse && (
+      <div class="cg-block">
+        <h3 class="cg-h">{guide.misuse.title ?? 'Felaktig användning'}</h3>
+        {guide.misuse.body && <p class="cg-body">{guide.misuse.body}</p>}
+        <div class="cg-grid" data-stagger>
+          {guide.misuse.items.map((m, i) => (
+            <figure class="cg-mis" style={`--i:${i}`}>
+              <div class="cg-mis__frame">
+                {m.media ? <Media item={m.media} {...media} /> : (
+                  <div class:list={['cg-demo', `cg-demo--${m.demo}`]} style={
+                    m.demo === 'contrast' ? `--bg:${lowA.hex};--fg:${lowB.hex}` :
+                    m.demo === 'gradient' ? `--bg:linear-gradient(135deg, ${primary[0]?.hex}, ${primary[1]?.hex ?? mix(primary[0]?.hex ?? '#000', '#fff', .5)});--fg:${readableOn(primary[0]?.hex ?? '#000')}` :
+                    m.demo === 'off-palette' ? `--bg:${offBrand};--fg:${readableOn(offBrand)}` :
+                    m.demo === 'proportion' ? `--bg:${accentA.hex};--fg:${readableOn(accentA.hex)};--accent:${primary[0]?.hex}` :
+                    m.demo === 'accent-text' ? `--bg:${accentA.hex};--fg:${accentB.hex}` :
+                    `--bg:${primary[1]?.hex ?? '#111'};--fg:#fff`
+                  }>
+                    {m.demo === 'too-many' && <span class="cg-demo__stripes">{stripes.map((c) => <i style={`background:${c.hex}`}></i>)}</span>}
+                    {m.demo === 'proportion' && <span class="cg-demo__chip"></span>}
+                    <p class="cg-demo__text">{text}</p>
+                    <span class="cg-demo__mark">{client}</span>
+                  </div>
+                )}
+                <span class="cg-mis__strike" aria-hidden="true"></span>
+              </div>
+              <figcaption class="cg-mis__cap"><span class="cg-mis__x" aria-hidden="true">✕</span>{m.caption}</figcaption>
+            </figure>
+          ))}
+        </div>
       </div>
-      <div class="tokens__btns">
-        <button class="btn btn--sm" type="button" data-copy-text={tokens.css} data-copy-done={t.tokens.copied}>CSS</button>
-        <button class="btn btn--sm" type="button" data-copy-text={tokens.json} data-copy-done={t.tokens.copied}>JSON</button>
-        <button class="btn btn--sm" type="button" data-copy-text={tokens.tailwind} data-copy-done={t.tokens.copied}>Tailwind</button>
-      </div>
+    )}
+    <div class="cg-block">
+      <ResourceBar title={t.tokens.label} hint={t.tokens.hint} kind="code">
+        {[['CSS', tokens.css], ['JSON', tokens.json], ['Tailwind', tokens.tailwind]].map(([name, value]) => (
+          <button class="rbtn" type="button" data-copy-text={value} data-copy-done={t.tokens.copied} aria-label={`Kopiera färger som ${name}`}>
+            <CopyGlyph /><span data-copy-label>{name}</span>
+          </button>
+        ))}
+      </ResourceBar>
     </div>
   </div>
 </section>

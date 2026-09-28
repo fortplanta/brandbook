@@ -1,0 +1,29 @@
+---
+/* One media tile: an image, a video (.mp4/.webm), or — when there's no src —
+   a poster generated from two palette colours, so the guide looks designed
+   before real photography exists. Scales its type with the tile (cqi). */
+import type { MediaItem, Color } from '../../content/profile';
+import { resolveColor } from '../../lib/color';
+interface Props { item: MediaItem; colors: Color[]; client: string; text: string; class?: string; eager?: boolean }
+const { item, colors, client, text, class: cls, eager = false } = Astro.props;
+const isVideo = item.src ? /\.(mp4|webm)(\?|$)/i.test(item.src) : false;
+const poster = !item.src && item.poster ? item.poster : undefined;
+const bg = poster ? resolveColor(poster.bg, colors).hex : undefined;
+const fg = poster ? resolveColor(poster.fg, colors).hex : undefined;
+const kind = poster?.kind ?? 'statement';
+const words = poster?.text ?? (kind === 'figure' ? '01' : text);
+---
+<div class:list={['cg-media', cls, poster && `cg-poster cg-poster--${kind}`, !item.src && !poster && 'cg-media--empty']} style={poster ? `--bg:${bg};--fg:${fg}` : undefined}>
+  {item.src && isVideo && <video src={item.src} muted loop playsinline autoplay preload="metadata" aria-label={item.alt ?? item.caption ?? ''}></video>}
+  {item.src && !isVideo && <img src={item.src} alt={item.alt ?? ''} loading={eager ? 'eager' : 'lazy'} decoding="async" />}
+  {poster && (
+    <div class="cg-poster__art" aria-hidden="true">
+      {kind === 'statement' && <p class="cg-poster__text">{words}</p>}
+      {kind === 'figure' && <><span class="cg-poster__figure">{words}</span><p class="cg-poster__small">{text}</p></>}
+      {kind === 'shape' && <><span class="cg-poster__circle"></span><p class="cg-poster__text cg-poster__text--sm">{words}</p></>}
+      {kind === 'split' && <><span class="cg-poster__half"></span><p class="cg-poster__text cg-poster__text--sm">{words}</p></>}
+      <span class="cg-poster__mark">{client}</span>
+    </div>
+  )}
+  {item.caption && <span class="cg-media__cap">{item.caption}</span>}
+</div>

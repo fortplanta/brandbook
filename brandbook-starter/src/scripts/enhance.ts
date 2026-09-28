@@ -44,10 +44,23 @@ const progress = document.querySelector<HTMLElement>('.progress');
 const cats = Array.from(document.querySelectorAll<HTMLElement>('.cat'));
 const sectionCat = new Map<string, HTMLElement>();
 
+/* "+ N till": shows a category's secondary pages in place. Opens by itself when
+   you scroll into one of them (the current page is never hidden), and resets
+   whenever its category closes. */
+const setMore = (cat: HTMLElement, on: boolean) => {
+  const btn = cat.querySelector<HTMLElement>('[data-cat-more]');
+  if (!btn) return;
+  cat.toggleAttribute('data-more', on);
+  btn.setAttribute('aria-expanded', String(on));
+  const label = btn.querySelector<HTMLElement>('[data-cat-more-label]');
+  if (label) label.textContent = on ? 'Visa färre' : (btn.dataset.moreLabel ?? '');
+};
+
 const setCatOpen = (cat: HTMLElement, open: boolean) => {
   if (cat.classList.contains('cat--locked')) return;
   cat.setAttribute('data-open', String(open));
   cat.querySelector('[data-cat-toggle]')?.setAttribute('aria-expanded', String(open));
+  if (!open) setMore(cat, false);
 };
 
 /* Suppress the collapse transition while we set the JS baseline, so nothing
@@ -74,7 +87,25 @@ cats.forEach((cat) => {
   head?.addEventListener('click', () => {
     setCatOpen(cat, cat.getAttribute('data-open') !== 'true');
   });
+  cat.querySelector('[data-cat-more]')?.addEventListener('click', () => setMore(cat, !cat.hasAttribute('data-more')));
 });
+
+/* Chapter heroes (one per category) count as their category in the nav: while
+   a hero is in view its category opens, like for its sections. Their looping
+   effects run only while on screen. */
+const chapters = Array.from(document.querySelectorAll<HTMLElement>('[data-chapter]'));
+chapters.forEach((ch) => {
+  const cat = cats.find((c) => c.dataset.cat === ch.dataset.chapter);
+  if (cat) sectionCat.set(ch.id, cat);
+});
+if (motion && 'IntersectionObserver' in window) {
+  const live = new IntersectionObserver((entries) => {
+    for (const e of entries) e.target.classList.toggle('is-live', e.isIntersecting);
+  });
+  chapters.forEach((ch) => live.observe(ch));
+  const coverEl = document.querySelector('[data-cover]');   // the cover's glow drifts only while on screen
+  if (coverEl) live.observe(coverEl);
+}
 
 // Re-enable transitions once the collapsed baseline has painted.
 requestAnimationFrame(() => requestAnimationFrame(() => drawer?.classList.remove('nav--boot')));
@@ -83,35 +114,6 @@ const MINIMIZE_AT = 0.25; // fraction of one viewport scrolled before the rail c
 const LINE = 0.32;        // active-section trigger line, as a fraction down the viewport
 let currentId = '';
 let ticking = false;
-
-/* Colour takeover driver. The pinned stage (.colorstory__stage) sticks for one
-   viewport per colour; we map how far the tall .colorstory has scrolled past the
-   top of the viewport to an active index, then cross-fade the background layer,
-   the matching card, and the progress dots. Purely presentational — the cards
-   are already readable without it. */
-const story = document.querySelector<HTMLElement>('[data-colorstory]');
-const storyBgs = story ? Array.from(story.querySelectorAll<HTMLElement>('[data-bg]')) : [];
-const storyPanels = story ? Array.from(story.querySelectorAll<HTMLElement>('[data-panel]')) : [];
-const storyDotWrap = story?.querySelector<HTMLElement>('.colorstory__dots') ?? null;
-const storyDots = story ? Array.from(story.querySelectorAll<HTMLElement>('[data-dot]')) : [];
-const storyFgs = storyPanels.map((p) => p.dataset.fg || '#fff');
-const storyCount = storyPanels.length;
-let storyIdx = -1;
-
-function driveColorStory() {
-  if (!motion || !story || storyCount === 0) return;
-  const rect = story.getBoundingClientRect();
-  const vh = window.innerHeight;
-  const span = story.offsetHeight - vh; // scrollable distance while pinned
-  const p = span > 0 ? Math.min(1, Math.max(0, -rect.top / span)) : 0;
-  const idx = Math.min(storyCount - 1, Math.floor(p * storyCount));
-  if (idx === storyIdx) return;
-  storyIdx = idx;
-  storyBgs.forEach((b, i) => b.classList.toggle('is-active', i === idx));
-  storyPanels.forEach((c, i) => c.classList.toggle('is-active', i === idx));
-  storyDots.forEach((d, i) => d.classList.toggle('is-active', i === idx));
-  if (storyDotWrap) storyDotWrap.style.color = storyFgs[idx];
-}
 
 /* Logo chapter MotionController. A generic scroll→progress pipeline: the
    primary logo pins and scrubs from hero (--t 0) to compact (--t 1) over the
@@ -166,17 +168,84 @@ if (logoMark) { const img = logoMark.querySelector('img'); if (img && !img.compl
    forces a layout (reading getBoundingClientRect per frame would re-run layout
    while the drawer is mid-transition). Re-measured whenever the page resizes. */
 let sectionTops: number[] = [];
+/* Chapter heroes (mask) + cover (parallax): cached geometry, re-measured with
+   the sections; the scroll handler writes transforms straight to the few
+   elements that move, and only when a value changes. */
+interface ChapterState {
+  el: HTMLElement; stage: HTMLElement | null; fx: HTMLElement | null;
+  curtains: HTMLElement[]; top: number; h: number;
+  out: { open: string; lag: string; fx: string };
+}
+const chapterState: ChapterState[] = chapters.map((el) => ({
+  el,
+  stage: el.querySelector<HTMLElement>('.chapter__stage'),
+  fx: el.querySelector<HTMLElement>('.chapter__fx'),
+  curtains: Array.from(el.querySelectorAll<HTMLElement>('.chapter__curtain')),
+  top: 0, h: 0,
+  out: { open: '', lag: '', fx: '' },
+}));
+const cover = document.querySelector<HTMLElement>('[data-cover]');
+const coverMedia = cover?.querySelector<HTMLElement>('[data-cover-media]') ?? null;
+let coverH = 0, coverOut = '';
 const measureSections = () => {
   sectionTops = sections.map((s) => s.getBoundingClientRect().top + window.scrollY);
+  for (const c of chapterState) {
+    c.top = c.el.getBoundingClientRect().top + window.scrollY;
+    c.h = c.el.offsetHeight;
+  }
+  coverH = cover?.offsetHeight ?? 0;
 };
 measureSections();
 if ('ResizeObserver' in window) new ResizeObserver(() => { measureSections(); }).observe(document.body);
 
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/* Chapter mask (values measured from the reference):
+   rel = the block's top relative to the viewport.
+   • open  — smoothstep from rel = 0.7·vh (window closed, ~39% wide) to rel = 0
+             (full-bleed); the curtains slide out by that fraction
+   • lag   — the stage sits 25% of its height low, easing in as (rel/vh)²
+   • fx    — parallax at 0.15× rel (the layer is oversized by 16% to cover it)
+   • text  — staggers in once, when the window is ~85% open */
+function paintChapter(c: ChapterState, y: number, vh: number) {
+  const rel = c.top - y;
+  const open = smooth(clamp01((0.7 * vh - rel) / (0.7 * vh)));
+  const out = {
+    open: open.toFixed(4),
+    lag: `translateY(${(0.25 * c.h * clamp01(rel / vh) ** 2).toFixed(1)}px)`,
+    fx: `translateY(${(Math.max(-vh, Math.min(vh, rel)) * -0.15).toFixed(1)}px)`,
+  };
+  if (out.open !== c.out.open) {
+    const pct = (open * 100).toFixed(2);
+    if (c.curtains[0]) c.curtains[0].style.transform = `translateX(-${pct}%)`;
+    if (c.curtains[1]) c.curtains[1].style.transform = `translateX(${pct}%)`;
+  }
+  if (out.lag !== c.out.lag && c.stage) c.stage.style.transform = out.lag;
+  if (out.fx !== c.out.fx && c.fx) c.fx.style.transform = out.fx;
+  c.out = out;
+  if (open > 0.85) c.el.classList.add('is-in');                       // entrance fires once
+}
+
 function onScroll() {
   ticking = false;
   if (drawer) drawer.toggleAttribute('data-min', window.scrollY > window.innerHeight * MINIMIZE_AT);
-  driveColorStory();
   driveLogoChapter();
+
+  if (motion) {
+    const y = window.scrollY, vh = window.innerHeight;
+    // Cover: the media layer drifts down at 0.3× scroll, so it reads as moving
+    // at ~0.7× speed behind the sticky title.
+    if (coverMedia && y <= coverH + 50) {
+      const v = `translateY(${(Math.min(y, coverH) * 0.3).toFixed(1)}px)`;
+      if (v !== coverOut) { coverOut = v; coverMedia.style.transform = v; }
+    }
+    // Chapter masks: only blocks near the viewport are painted.
+    for (const c of chapterState) {
+      if (c.top - y > vh * 1.5 || c.top + c.h - y < -vh * 0.5) continue;
+      paintChapter(c, y, vh);
+    }
+  }
 
   // Scroll progress bar (JS-driven — no CSS scroll timeline needed).
   if (progress && motion) {
@@ -205,6 +274,8 @@ function onScroll() {
         c.toggleAttribute('data-active', c === activeCat);
         setCatOpen(c, c === activeCat);
       });
+      // scrolled into a secondary page → reveal the rest so it's highlighted
+      if (activeCat && links.get(activeId)?.closest('.nav__item--more')) setMore(activeCat, true);
     }
   }
 }
@@ -214,37 +285,27 @@ window.addEventListener('scroll', () => {
 }, { passive: true });
 window.addEventListener('resize', () => { measureLogoTargets(); measureSections(); onScroll(); }, { passive: true });
 
-/* 3. Copy-to-clipboard on colour swatches. */
-document.querySelectorAll<HTMLElement>('[data-copy]').forEach((el) => {
-  el.addEventListener('click', async () => {
-    const value = el.dataset.copy!;
-    try {
-      await navigator.clipboard.writeText(value);
-      el.classList.add('is-copied');             // flips the copy icon to a check
-      const label = el.querySelector<HTMLElement>('[data-copy-label]');
-      const prev = label?.textContent ?? null;
-      if (label) { label.textContent = 'Kopierat'; label.classList.add('swatch__copied'); }
-      setTimeout(() => {
-        el.classList.remove('is-copied');
-        if (label) { label.textContent = prev; label.classList.remove('swatch__copied'); }
-      }, 1100);
-    } catch { /* clipboard blocked — no-op */ }
-  });
-});
-
-/* 3b. Copy arbitrary text (design-token export buttons). Swaps the button label
-      to a confirmation for a beat; no layout shift (min-width holds the width). */
-document.querySelectorAll<HTMLElement>('[data-copy-text]').forEach((el) => {
-  const original = el.textContent;
+/* 3. Copy-to-clipboard — swatches/tints ([data-copy] = the value) and the
+      resource buttons ([data-copy-text]). A copied element gets .is-copied
+      (its icon flips to a check) and its [data-copy-label] reads "Kopierat"
+      for a beat. The original label is remembered once and the timer resets
+      on repeat clicks, so rapid clicks can't leave it stuck on "Kopierat". */
+const armCopy = (el: HTMLElement, value: () => string, done: string, ms: number) => {
+  const label = el.querySelector<HTMLElement>('[data-copy-label]');
+  const original = label?.textContent ?? '';
+  let timer = 0;
   el.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(el.dataset.copyText ?? '');
+      await navigator.clipboard.writeText(value());
       el.classList.add('is-copied');
-      el.textContent = el.dataset.copyDone ?? 'Kopierat';
-      setTimeout(() => { el.classList.remove('is-copied'); el.textContent = original; }, 1200);
+      if (label) label.textContent = done;
+      clearTimeout(timer);
+      timer = window.setTimeout(() => { el.classList.remove('is-copied'); if (label) label.textContent = original; }, ms);
     } catch { /* clipboard blocked — no-op */ }
   });
-});
+};
+document.querySelectorAll<HTMLElement>('[data-copy]').forEach((el) => armCopy(el, () => el.dataset.copy!, 'Kopierat', 1400));
+document.querySelectorAll<HTMLElement>('[data-copy-text]').forEach((el) => armCopy(el, () => el.dataset.copyText ?? '', el.dataset.copyDone ?? 'Kopierat', 1400));
 
 /* 4. Print / "Spara som PDF". */
 document.querySelectorAll('[data-print]').forEach((btn) =>
@@ -304,13 +365,17 @@ document.querySelectorAll<HTMLElement>('.nav__foot').forEach((foot) => {
     const label = sec.querySelector('.section__title')?.textContent?.trim();
     if (label) index.push({ label, kind: 'Sektion', node: sec });
   });
+  document.querySelectorAll<HTMLElement>('[data-chapter]').forEach((ch) => {
+    const label = ch.querySelector('.chapter__title')?.textContent?.trim();
+    if (label) index.push({ label, kind: 'Kapitel', node: ch });
+  });
   const add = (sel: string, kindFallback: string, label: (el: HTMLElement) => string, extra?: (el: HTMLElement) => string | undefined) => {
     document.querySelectorAll<HTMLElement>(sel).forEach((el) => {
       const l = label(el);
       if (l) index.push({ label: l, kind: sectionTitle(el) || kindFallback, extra: extra?.(el), node: el });
     });
   };
-  add('.swatch', 'Färg', (el) => firstTextOnly(el.querySelector('.swatch__name')), (el) => el.getAttribute('data-copy') ?? undefined);
+  add('button.cg-card', 'Färg', (el) => el.querySelector('.cg-card__name')?.textContent?.trim() ?? '', (el) => el.getAttribute('data-copy') ?? undefined);
   add('.type', 'Typografi', (el) => el.querySelector('.type__name')?.textContent?.trim() ?? '');
   add('.logo', 'Logotyp', (el) => el.querySelector('.logo__name')?.textContent?.trim() ?? '');
   add('.platform__block', 'Plattform', (el) => el.querySelector('.platform__title')?.textContent?.trim() ?? '');
@@ -505,3 +570,152 @@ document.querySelectorAll<HTMLElement>('.nav__foot').forEach((foot) => {
     });
   }
 })();
+
+
+/* 7. Colour guide — staggered reveals, "in use" marquees, stories slideshows.
+      All progressive: without JS (or with reduced motion) the grids are simply
+      visible, the marquee is a plain scroller, the stories show slide one. */
+
+/* Stagger: any [data-stagger] grid fades its children in (30–80ms steps, per
+   --i in the markup) the first time it scrolls into view. */
+if (motion && 'IntersectionObserver' in window) {
+  const staggerIO = new IntersectionObserver((entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      const grid = e.target as HTMLElement;
+      grid.classList.add('is-in');
+      staggerIO.unobserve(grid);
+      // once everything has landed, drop the entrance transition so hover/press stay snappy
+      const n = grid.children.length;
+      window.setTimeout(() => grid.classList.add('is-done'), 700 + n * 60 + 50);
+    }
+  }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+  document.querySelectorAll('[data-stagger]').forEach((g) => staggerIO.observe(g));
+}
+
+/* Marquee: one linear WAAPI animation per track (runs on the compositor), moving
+   exactly one set's width so the duplicate set makes the loop seamless. Hovering
+   a tile eases the playback rate down to a crawl; leaving eases it back. Paused
+   while off screen. */
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+document.querySelectorAll<HTMLElement>('[data-marquee]').forEach((wrap) => {
+  const track = wrap.querySelector<HTMLElement>('[data-marquee-track]');
+  if (!motion || !track || !('animate' in track)) return;
+  const SPEED = 38;      // px per second at full speed
+  const SLOW = 0.08;     // playback rate while hovering a tile
+  let anim: Animation | null = null;
+  const build = () => {
+    const progress = anim && anim.effect ? (anim.currentTime as number ?? 0) / ((anim.effect.getTiming().duration as number) || 1) : 0;
+    anim?.cancel();
+    const half = track.scrollWidth / 2;
+    if (half <= 0) return;
+    anim = track.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${-half}px)` }], {
+      duration: (half / SPEED) * 1000, iterations: Infinity, easing: 'linear',
+    });
+    anim.currentTime = progress * (half / SPEED) * 1000;
+    if (!visible) anim.pause();
+  };
+  let visible = false;
+  new IntersectionObserver(([e]) => {
+    visible = e.isIntersecting;
+    if (!anim) build();
+    if (visible) anim?.play(); else anim?.pause();
+  }).observe(wrap);
+  if ('ResizeObserver' in window) {
+    let w = track.scrollWidth;
+    new ResizeObserver(() => { if (Math.abs(track.scrollWidth - w) > 1) { w = track.scrollWidth; build(); } }).observe(track);
+  }
+
+  // hover: tween playbackRate (fine pointers only — touch has no hover)
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  let raf = 0;
+  const tweenRate = (to: number, ms: number) => {
+    cancelAnimationFrame(raf);
+    if (!anim) return;
+    const from = anim.playbackRate, t0 = performance.now();
+    const step = (now: number) => {
+      const k = Math.min(1, (now - t0) / ms);
+      anim?.updatePlaybackRate(from + (to - from) * easeOutCubic(k));
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+  };
+  track.querySelectorAll<HTMLElement>('[data-marquee-item]').forEach((item) => {
+    item.addEventListener('pointerenter', () => tweenRate(SLOW, 450));
+    item.addEventListener('pointerleave', () => tweenRate(1, 700));
+  });
+});
+
+/* Stories: Instagram-style. Tap right = next, left = previous; drag/swipe;
+   arrow keys when focused. Auto-advances while on screen (the active bar fills),
+   pauses while a press is held or the tab is hidden. */
+document.querySelectorAll<HTMLElement>('[data-stories]').forEach((root) => {
+  const track = root.querySelector<HTMLElement>('[data-stories-track]');
+  const slides = track ? Array.from(track.children) as HTMLElement[] : [];
+  const bars = Array.from(root.querySelectorAll<HTMLElement>('.cg-stories__bar'));
+  const counter = root.querySelector<HTMLElement>('[data-stories-index]');
+  if (!track || slides.length < 2) return;
+  const DURATION = 5000;
+  let index = 0, elapsed = 0, last = 0, raf = 0, visible = false, held = false;
+
+  const paintBars = () => bars.forEach((b, i) => {
+    b.classList.toggle('is-done', i < index);
+    const fill = b.firstElementChild as HTMLElement | null;
+    if (fill && i >= index) fill.style.transform = i === index ? `scaleX(${Math.min(1, elapsed / DURATION)})` : 'scaleX(0)';
+    if (fill && i < index) fill.style.transform = '';
+  });
+  const go = (to: number) => {
+    index = (to + slides.length) % slides.length;
+    elapsed = 0;
+    track.style.transform = `translateX(${-index * 100}%)`;
+    slides.forEach((s, i) => s.setAttribute('aria-hidden', String(i !== index)));
+    if (counter) counter.textContent = String(index + 1);
+    paintBars();
+  };
+  const tick = (now: number) => {
+    if (last) elapsed += now - last;
+    last = now;
+    if (elapsed >= DURATION) go(index + 1); else paintBars();
+    raf = requestAnimationFrame(tick);
+  };
+  const run = () => {
+    cancelAnimationFrame(raf); last = 0;
+    if (motion && visible && !held && !document.hidden) raf = requestAnimationFrame(tick);
+  };
+
+  root.querySelector('[data-stories-prev]')?.addEventListener('click', (e) => { if (!dragged) go(index - 1); e.preventDefault(); });
+  root.querySelector('[data-stories-next]')?.addEventListener('click', (e) => { if (!dragged) go(index + 1); e.preventDefault(); });
+  root.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { go(index + 1); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { go(index - 1); e.preventDefault(); }
+  });
+
+  // hold to pause; drag to swipe (a short press is still a tap on the zones)
+  let startX = 0, dx = 0, down = false, dragged = false;
+  root.addEventListener('pointerdown', (e) => {
+    down = true; dragged = false; startX = e.clientX; dx = 0; held = true; run();
+  });
+  root.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    dx = e.clientX - startX;
+    if (!dragged && Math.abs(dx) > 8) { dragged = true; track.classList.add('is-dragging'); root.setPointerCapture(e.pointerId); }
+    if (dragged) track.style.transform = `translateX(calc(${-index * 100}% + ${dx}px))`;
+  });
+  const release = () => {
+    if (!down) return;
+    down = false; held = false;
+    if (dragged) {
+      track.classList.remove('is-dragging');
+      const w = root.clientWidth || 1;
+      if (Math.abs(dx) > w * 0.15) go(index + (dx < 0 ? 1 : -1)); else go(index);
+      window.setTimeout(() => { dragged = false; }, 0);   // swallow the click that follows a drag
+    }
+    run();
+  };
+  root.addEventListener('pointerup', release);
+  root.addEventListener('pointercancel', release);
+
+  new IntersectionObserver(([e]) => { visible = e.isIntersecting; run(); }, { threshold: 0.4 }).observe(root);
+  document.addEventListener('visibilitychange', run);
+  go(0);
+});

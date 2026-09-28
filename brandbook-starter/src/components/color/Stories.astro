@@ -1,0 +1,25 @@
+---
+/* Stories slideshow (Instagram-style): progress bars on top, tap the right side
+   for next / left side for previous, drag or swipe, arrow keys when focused.
+   Auto-advances while on screen; holding a press pauses it. Driven by
+   enhance.ts; without JS the first slide shows and the zones do nothing. */
+import type { MediaItem, Color } from '../../content/profile';
+import Media from './Media.astro';
+interface Props { slides: MediaItem[]; colors: Color[]; client: string; text: string; label: string }
+const { slides, colors, client, text, label } = Astro.props;
+---
+<div class="cg-stories" data-stories tabindex="0" role="region" aria-roledescription="bildspel" aria-label={label}>
+  <div class="cg-stories__bars" aria-hidden="true">
+    {slides.map(() => <span class="cg-stories__bar"><i></i></span>)}
+  </div>
+  <div class="cg-stories__track" data-stories-track>
+    {slides.map((s, i) => (
+      <div class="cg-stories__slide" aria-hidden={i === 0 ? 'false' : 'true'}>
+        <Media item={s} colors={colors} client={client} text={text} eager={i === 0} />
+      </div>
+    ))}
+  </div>
+  <button class="cg-stories__zone cg-stories__zone--prev" type="button" data-stories-prev aria-label="Föregående bild"></button>
+  <button class="cg-stories__zone cg-stories__zone--next" type="button" data-stories-next aria-label="Nästa bild"></button>
+  <span class="cg-stories__count" aria-live="polite"><span data-stories-index>1</span> / {slides.length}</span>
+</div>

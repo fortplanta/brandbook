@@ -1,17 +1,20 @@
 ---
+/* Sidebar. Progressive disclosure: an open category lists only its primary
+   pages; the rest (in page order) are behind "+ N till" and appear in place
+   (enhance.ts also opens it when you scroll into one of them). Footer tools are
+   a single quiet row of icon buttons. */
 import { t } from '../lib/strings';
-import type { ChangeEntry } from '../content/profile';
 
-interface NavItem { id: string; label: string; locked?: boolean; }
+interface NavItem { id: string; label: string; locked?: boolean; primary?: boolean; hidden?: boolean; }
 interface NavCat { id: string; label: string; locked?: boolean; items: NavItem[]; }
 interface Props {
   client: string;
   updated?: string;
   nav: NavCat[];
   downloadAllHref?: string;
-  changelog?: ChangeEntry[];
+  historyHref?: string;
 }
-const { client, updated, nav, downloadAllHref, changelog } = Astro.props;
+const { client, updated, nav, downloadAllHref, historyHref } = Astro.props;
 const initial = client.trim().charAt(0).toUpperCase();
 ---
 
@@ -53,21 +56,32 @@ const initial = client.trim().charAt(0).toUpperCase();
 
           {!cat.locked && (
             <div class="cat__list">
-              <ul>
-                {cat.items.map((it) => (
-                  <li>
-                    {it.locked ? (
-                      <span class="nav__link nav__link--locked" aria-disabled="true" title={t.locked.aria}>
-                        <span class="nav__linklabel">{it.label}</span>
-                      </span>
-                    ) : (
-                      <a class="nav__link" href={`#${it.id}`} data-nav-link={it.id}>
-                        <span class="nav__linklabel">{it.label}</span>
-                      </a>
-                    )}
-                  </li>
-                ))}
-              </ul>
+              <div class="cat__inner">
+                <ul>
+                  {cat.items.map((it) => (
+                    <li class:list={[!it.primary && 'nav__item--more']} hidden={it.hidden}>
+                      {it.locked ? (
+                        <span class="nav__link nav__link--locked" aria-disabled="true" title={t.locked.aria}>
+                          <span class="nav__linklabel">{it.label}</span>
+                        </span>
+                      ) : (
+                        <a class="nav__link" href={`#${it.id}`} data-nav-link={it.id}>
+                          <span class="nav__linklabel">{it.label}</span>
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+                {(() => {
+                  const more = cat.items.filter((it) => !it.primary && !it.hidden).length;
+                  return more > 0 && (
+                    <button class="cat__more" type="button" data-cat-more aria-expanded="false" data-more-label={`+ ${more} till`}>
+                      <span data-cat-more-label>+ {more} till</span>
+                      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
           )}
         </div>
@@ -76,36 +90,25 @@ const initial = client.trim().charAt(0).toUpperCase();
 
     <div class="nav__foot">
       <div class="nav__foot-inner">
-        <div class="nav__actions">
+        <div class="nav__tools">
           {downloadAllHref && (
-            <a class="btn btn--solid" href={downloadAllHref} download>{t.actions.downloadAll}</a>
+            <a class="navtool" href={downloadAllHref} download aria-label={t.actions.downloadAll} title={t.actions.downloadAll}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+            </a>
           )}
-          <button class="btn" type="button" data-print>{t.actions.downloadPdf}</button>
-        </div>
-
-        {changelog && changelog.length > 0 && (
-          <details class="changelog">
-            <summary class="changelog__summary">
-              <svg class="changelog__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
-              <span>{t.changelog.toggle}</span>
-              <svg class="changelog__chev" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </summary>
-            <ul class="changelog__list">
-              {changelog.map((c) => (
-                <li class="changelog__item">
-                  <span class="changelog__date">{c.date}</span>
-                  <span class="changelog__note">{c.note}</span>
-                </li>
-              ))}
-            </ul>
-          </details>
-        )}
-        <div class="nav__foot-row">
-          <p class="nav__made">Skapad av <a href="https://ohmy.se" target="_blank" rel="noopener">Oh My</a></p>
-          <button class="nav__sound" type="button" data-sound-toggle aria-pressed="true" title="Ljudeffekter">
-            <span class="nav__sound-icon" aria-hidden="true"></span>
-            <span class="nav__sound-label">Ljud</span>
+          <button class="navtool" type="button" data-print aria-label={t.actions.downloadPdf} title={t.actions.downloadPdf}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>
           </button>
+          {historyHref && (
+            <a class="navtool" href={historyHref} aria-label="Versionshistorik" title="Versionshistorik">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l3 2"/></svg>
+            </a>
+          )}
+          <button class="navtool nav__sound" type="button" data-sound-toggle aria-pressed="true" aria-label="Ljudeffekter" title="Ljudeffekter">
+            <svg class="nav__sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            <svg class="nav__sound-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>
+          </button>
+          <a class="nav__made" href="https://ohmy.se" target="_blank" rel="noopener">Skapad av Oh My</a>
         </div>
       </div>
     </div>

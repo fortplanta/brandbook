@@ -17,6 +17,39 @@ export interface DownloadFile { label: string; href: string; size?: string; }
 export interface Logo {
   name: string; note?: string; onDark?: boolean; image: string; files: DownloadFile[];
 }
+/* 11 Färgpalett — the colour guide. Colours are defined once in `colors`; the
+   guide references them BY NAME (or a raw hex) and adds the structure: palettes,
+   combinations, tints, colour in context and misuse. Media is optional
+   everywhere: an item without `src` renders a poster generated from the
+   palette, so the section looks designed before real photography exists. */
+export interface Poster {
+  bg: string;                       // colour name or hex
+  fg: string;                       // colour name or hex
+  text?: string;                    // defaults to the client's tagline
+  kind?: 'statement' | 'figure' | 'shape' | 'split';
+}
+export interface MediaItem {
+  src?: string;                     // image, or video if it ends in .mp4/.webm
+  alt?: string;
+  caption?: string;                 // small label on the tile
+  poster?: Poster;                  // used when there's no src
+}
+export interface InUse { title: string; body?: string; media: MediaItem[] }
+export interface Palette { title: string; body?: string; colors: string[]; inUse?: InUse }
+export interface ColorPair { bg: string; fg: string; note?: string }
+export interface ContextStage { label: string; body?: string; slides: MediaItem[] }
+export type MisuseDemo = 'contrast' | 'gradient' | 'off-palette' | 'too-many' | 'proportion' | 'accent-text';
+export interface MisuseItem { caption: string; media?: MediaItem; demo?: MisuseDemo }
+export interface ColorGuide {
+  hero?: { title?: string; lede?: string; media?: MediaItem };
+  intro?: { lead: string; body?: string; media?: MediaItem };
+  palettes: Palette[];
+  combinations?: { title?: string; body?: string; pairs: ColorPair[]; slides?: MediaItem[] };
+  tints?: { title?: string; body?: string; colors?: string[] };   // default: the first palette
+  context?: { title?: string; body?: string; stages: ContextStage[] };
+  misuse?: { title?: string; body?: string; items: MisuseItem[] };
+}
+
 export interface Color {
   name: string; hex: string; rgb?: string; cmyk?: string; pantone?: string; role?: string;
 }
@@ -30,9 +63,9 @@ export interface DownloadGroup { group: string; items: DownloadFile[]; }
    and this makes that visible (the edge over a PDF someone downloaded months ago). */
 export interface ChangeEntry { date: string; note: string; }
 
-/* 5 Positionering */
+/* 6 Positionering */
 export interface PlatformBlock { title: string; body: string; }
-/* 7 Tonalitet & röst */
+/* 9 Tonalitet & röst */
 export interface TonePrinciple { name: string; description: string; do?: string; dont?: string; }
 export interface Tone { intro?: string; principles: TonePrinciple[]; boilerplate?: string; }
 
@@ -44,10 +77,11 @@ export interface Profile {
   cover?: { note?: string; background?: string };
   downloadAllHref?: string;
 
-  platform: PlatformBlock[];      // 5 Positionering
-  tone?: Tone;                    // 7 Tonalitet & röst
+  platform: PlatformBlock[];      // 6 Positionering
+  tone?: Tone;                    // 9 Tonalitet & röst
   logos: Logo[];
   colors: Color[];
+  colorGuide?: ColorGuide;        // 11 — structure for the colour section (see above)
   typography: Typeface[];
   imagery: { note?: string; images: ImageItem[] };
   motion: MotionItem[];
@@ -118,6 +152,110 @@ export const profile: Profile = {
     { name: 'Mint',   hex: '#A5D9CB', rgb: '165 217 203', role: 'Cool accent' },
     { name: 'Black',  hex: '#000000', rgb: '0 0 0',       role: 'Contrast' },
   ],
+
+  colorGuide: {
+    hero: {
+      lede: 'Signal blue leads, deep navy grounds it and two warm accents keep it human. One palette, from app icon to building signage.',
+    },
+    intro: {
+      lead: 'It starts with Signal — a blue that reads as clarity. Around it, a palette built to stay calm while the work gets done.',
+      body: 'The primary palette carries every surface of the brand. The secondary palette adds range for product, campaigns and data — always in support of the primary, never instead of it.',
+      media: { poster: { bg: 'Navy', fg: 'Sky', kind: 'statement' }, caption: 'Signal on Navy' },
+    },
+    palettes: [
+      {
+        title: 'Primärpalett',
+        body: 'Signal, Navy and Ink carry the brand. Together they cover every background, every headline and every button — a restrained base that makes Tangent instantly recognisable.',
+        colors: ['Signal', 'Navy', 'Ink'],
+        inUse: {
+          title: 'Primärpaletten i bruk',
+          body: 'Keep it simple. A Signal, Navy or Ink background with type from the same palette gives a clean, distinctly Tangent look.',
+          media: [
+            { poster: { bg: 'Signal', fg: 'Ink', kind: 'statement' } },
+            { src: '/assets/imagery/mock-product.svg', caption: 'Produkt' },
+            { poster: { bg: 'Ink', fg: 'Signal', kind: 'figure', text: '24/7' } },
+            { poster: { bg: 'Navy', fg: 'Sky', kind: 'shape' } },
+            { src: '/assets/imagery/mock-signage.svg', caption: 'Skyltning' },
+            { poster: { bg: 'Signal', fg: 'Navy', kind: 'split' } },
+          ],
+        },
+      },
+      {
+        title: 'Sekundärpalett',
+        body: 'Lighter blues for depth and hierarchy, Sand and Mint for warmth. Use them to separate, highlight and illustrate — in smaller doses than the primary palette.',
+        colors: ['Sky', 'Azure', 'Deep', 'Sand', 'Mint', 'Black'],
+        inUse: {
+          title: 'Sekundärpaletten i bruk',
+          body: 'Secondary colours work best as blocks and accents on a primary background — in product states, charts and campaign details.',
+          media: [
+            { poster: { bg: 'Sand', fg: 'Navy', kind: 'statement' } },
+            { poster: { bg: 'Mint', fg: 'Ink', kind: 'figure', text: '98%' } },
+            { src: '/assets/imagery/mock-app.svg', caption: 'App' },
+            { poster: { bg: 'Sky', fg: 'Navy', kind: 'shape' } },
+            { poster: { bg: 'Deep', fg: 'Sand', kind: 'split' } },
+          ],
+        },
+      },
+    ],
+    combinations: {
+      title: 'Godkända kombinationer',
+      body: 'These pairs are tested for contrast and character. Background first, type second — stay within them and any layout reads as Tangent.',
+      pairs: [
+        { bg: 'Ink', fg: 'Sky' }, { bg: 'Signal', fg: 'Ink' }, { bg: 'Sand', fg: 'Navy' },
+        { bg: 'Mint', fg: 'Ink' }, { bg: 'Navy', fg: 'Sand' }, { bg: 'Sky', fg: 'Navy' },
+      ],
+      slides: [
+        { poster: { bg: 'Ink', fg: 'Sky', kind: 'statement' }, caption: 'Ink · Sky' },
+        { poster: { bg: 'Sand', fg: 'Navy', kind: 'figure', text: '3×' }, caption: 'Sand · Navy' },
+        { poster: { bg: 'Signal', fg: 'Ink', kind: 'shape' }, caption: 'Signal · Ink' },
+        { poster: { bg: 'Mint', fg: 'Ink', kind: 'split' }, caption: 'Mint · Ink' },
+      ],
+    },
+    tints: {
+      body: 'For interfaces, charts and dense layouts, each primary colour extends into a scale. Use tints for states and surfaces — never as a replacement for the full colour.',
+    },
+    context: {
+      body: 'The palette flexes with the situation: bold and primary where the brand introduces itself, lighter and more functional the closer people get to the product.',
+      stages: [
+        {
+          label: 'Digitalt',
+          body: 'Web and product lean on Ink and Navy surfaces with Signal for action. Secondary colours mark states and data.',
+          slides: [
+            { src: '/assets/imagery/mock-product.svg', caption: 'Produktgränssnitt' },
+            { poster: { bg: 'Ink', fg: 'Signal', kind: 'figure', text: '+18%' }, caption: 'Dashboard' },
+            { poster: { bg: 'Navy', fg: 'Sky', kind: 'statement' }, caption: 'Webb' },
+          ],
+        },
+        {
+          label: 'Print',
+          body: 'In print, large Signal fields and generous white space. Sand and Mint only as accents.',
+          slides: [
+            { poster: { bg: 'Signal', fg: 'Ink', kind: 'statement' }, caption: 'Affisch' },
+            { poster: { bg: 'Sand', fg: 'Navy', kind: 'split' }, caption: 'Broschyr' },
+          ],
+        },
+        {
+          label: 'Miljö',
+          body: 'Signage and spaces are dark and architectural — Ink and Navy with Signal as the single point of light.',
+          slides: [
+            { src: '/assets/imagery/mock-signage.svg', caption: 'Skyltning' },
+            { poster: { bg: 'Ink', fg: 'Signal', kind: 'shape' }, caption: 'Entré' },
+          ],
+        },
+      ],
+    },
+    misuse: {
+      body: 'The palette is flexible — within limits. Follow these so the brand stays consistent and legible.',
+      items: [
+        { demo: 'contrast', caption: 'Kombinera inte färger med för låg kontrast.' },
+        { demo: 'gradient', caption: 'Skapa inte gradienter mellan varumärkesfärgerna.' },
+        { demo: 'off-palette', caption: 'Introducera inte färger utanför paletten.' },
+        { demo: 'too-many', caption: 'Använd inte för många färger samtidigt.' },
+        { demo: 'proportion', caption: 'Låt inte accentfärgerna ta över primärpaletten.' },
+        { demo: 'accent-text', caption: 'Sätt inte text i accentfärger på accentfärger.' },
+      ],
+    },
+  },
 
   typography: [
     {

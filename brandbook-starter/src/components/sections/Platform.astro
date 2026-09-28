@@ -1,12 +1,13 @@
 ---
-import SectionHead from '../SectionHead.astro';
+import SectionHero from '../SectionHero.astro';
 import type { PlatformBlock } from '../../content/profile';
 interface Props { platform: PlatformBlock[]; }
 const { platform } = Astro.props;
 ---
-<section class="section" id="positionering">
+<section class="section sect" id="positionering">
+  <SectionHero id="positionering" />
+  <div class="sect__body">
   <div class="wrap">
-    <SectionHead id="positionering" />
     <div class="platform">
       {platform.map((b) => (
         <div class="platform__block" data-reveal>
@@ -16,4 +17,5 @@ const { platform } = Astro.props;
       ))}
     </div>
   </div>
+</div>
 </section>

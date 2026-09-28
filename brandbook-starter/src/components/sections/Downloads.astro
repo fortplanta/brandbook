@@ -1,17 +1,15 @@
 ---
-import SectionHead from '../SectionHead.astro';
+import SectionHero from '../SectionHero.astro';
+import ResourceBar from '../ResourceBar.astro';
 import { t } from '../../lib/strings';
 import type { DownloadGroup } from '../../content/profile';
 interface Props { downloads: DownloadGroup[]; downloadAllHref?: string; }
 const { downloads, downloadAllHref } = Astro.props;
 ---
-<section class="section" id="downloads">
+<section class="section sect" id="downloads">
+  <SectionHero id="downloads" />
+  <div class="sect__body">
   <div class="wrap">
-  <SectionHead id="downloads">
-    {downloadAllHref && (
-      <p style="margin-top:1rem"><a class="btn btn--solid" href={downloadAllHref} download>{t.actions.downloadAll}</a></p>
-    )}
-  </SectionHead>
 
   {downloads.map((g) => (
     <div class="dl-group" data-reveal>
@@ -28,4 +26,15 @@ const { downloads, downloadAllHref } = Astro.props;
     </div>
   ))}
   </div>
+  {downloadAllHref && (
+    <div class="sect__resource">
+      <ResourceBar title={t.actions.downloadAll} hint="Logotyper, bilder och typsnittslänkar i ett paket — alltid den senaste versionen." kind="download">
+        <a class="rbtn" href={downloadAllHref} download>
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>
+          Ladda ner ZIP
+        </a>
+      </ResourceBar>
+    </div>
+  )}
+</div>
 </section>

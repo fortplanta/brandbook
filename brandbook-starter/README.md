@@ -38,17 +38,21 @@ Because content is pulled at **build time**, the CMS is never a runtime dependen
 
 ## Structure: categories, sections & what shows
 
-The template is one fixed structure — 5 categories, 28 numbered sections — defined in `src/content/categories.ts` (names, numbers, order and the placeholder copy for each):
+The template is one fixed structure — 5 categories → 2–3 non-clickable groups each → 28 sections — defined in `src/content/categories.ts` (names, order, groups and each section's description). Section numbers are computed from the order.
 
 ```
-I.   Varumärkesplattform    1–9    Introduktion … Målgrupper / personas
-II.  Visuell identitet     10–17   Logotyp, Färgpalett, Typografi, … Illustrationsmanér
-III. Rörligt & ljud        18–20   Rörlig identitet, Video-guidelines, Ljud-ID
-IV.  Tillämpning           21–25   Digitala/Print-applikationer, Co-branding, Merch, Exempel
-V.   Resurser & governance 26–28   Nedladdningsbara assets, Kontakt & godkännande, Versionshistorik
+I.   Varumärkesplattform    Grund · Marknad · Personlighet & röst              1–9
+II.  Visuell identitet      Grundelement · Bildvärld                          10–17
+III. Rörligt & ljud         Rörelse · Ljud                                    18–20
+IV.  Tillämpning            Kanaler · Partners & produkter · Inspiration      21–25
+V.   Resurser & governance  Filer · Förvaltning                               26–28
 ```
+
+**Sidebar = progressive disclosure.** An open category lists only its `primary` pages (marked in `categories.ts` — the ones people open daily); the rest sit behind a quiet "+ N till" and appear in place, in page order. It opens by itself when you scroll into one of those pages and resets when the category closes. A category with ≤ 4 pages shows them all; if a client hides primary pages, the next ones are promoted. Groups aren't shown in the sidebar — they're the columns of each chapter hero's contents. The footer is one row of icon buttons (download all, PDF, version history, sound) + the credit; Versionshistorik is reached from there rather than the list.
 
 Section headings carry the number and category ("10 — Visuell identitet"); the side nav groups them into collapsible categories (an accordion).
+
+Each category opens with a **chapter hero** (`components/CategoryHero.astro`) — a full-screen dark break with the chapter numeral, title, intro (`intro` in `categories.ts`), a table of contents and an effect themed to the category (rings, the client's palette, a waveform, real formats, a ledger of files). Its motion is modelled on the "perfect union" mask at car.capricorngroup.net: the block rises as a narrow centred window that opens sideways to full-bleed, lagging slightly into place, with the effect in parallax; then the text staggers in. The **cover** follows the same site's hero: two screens tall, the title sticks bottom-left through the first while the media behind it (`cover.background` — image or video — or a brand-colour glow) moves in slow parallax. Transform/opacity only, layers promoted only while on screen; with reduced motion it's all static.
 
 **What shows is granular, per client** (in `profile.ts`):
 
@@ -65,7 +69,7 @@ hideEmpty: true,
 
 ## Sections
 
-Each section has its own component in `src/components/sections/`. Built so far: Positionering (`Platform`), Tonalitet & röst (`Tone` — principles with do/don't and a copyable boilerplate), Logotyp (`LogotypesSection`), Färgpalett (`Colors` — click HEX to copy), Typografi (live specimens), Bildspråk / fotostil (`Imagery`), Rörlig identitet (`Motion` — native `<video>`), Nedladdningsbara assets (`Downloads`, incl. a pre-built "Ladda ner allt" ZIP) and Versionshistorik (renders `changelog`). The rest are stubs that render the placeholder until they're built — build one by replacing its stub, and add its content check to `has` in `pages/index.astro`.
+Each section has its own component in `src/components/sections/`. Built so far: Positionering (`Platform`), Tonalitet & röst (`Tone` — principles with do/don't and a copyable boilerplate), Logotyp (`LogotypesSection`), Färgpalett (`Colors` — a full colour guide driven by `colorGuide` in `profile.ts`: section hero, intro, palettes with swatch cards and an "in use" marquee that slows on hover, approved combinations with a stories slideshow, generated tints, colour in context and misuse examples built from the client's own palette; media is optional everywhere — missing media becomes posters generated from the palette), Typografi (live specimens), Bildspråk / fotostil (`Imagery`), Rörlig identitet (`Motion` — native `<video>`), Nedladdningsbara assets (`Downloads`, incl. a pre-built "Ladda ner allt" ZIP) and Versionshistorik (renders `changelog`). The rest are stubs that render the placeholder until they're built — build one by replacing its stub, and add its content check to `has` in `pages/index.astro`.
 
 ## For developers & power users
 

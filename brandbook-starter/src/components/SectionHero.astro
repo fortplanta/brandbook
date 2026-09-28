@@ -1,0 +1,31 @@
+---
+/* Section hero (Figma "Main Hero") — opens EVERY content section, so the
+   sections inside a category read as distinct stops. Full-bleed media, a pill
+   (the section's number and category), a large title and a lede, bottom-left.
+   Media: an image or video (`media.src`); else the `fallback` slot (a themed
+   composition from the section's own content — logo, type, palette…); else
+   the section's number, large, over a brand glow. The lede defaults to the
+   section's description from the template structure. The title keeps
+   .section__title so search reads it like any section heading. */
+import { sectionById } from '../content/categories';
+interface Props { id: string; title?: string; lede?: string; media?: { src?: string; alt?: string } }
+const { id, title, lede, media } = Astro.props;
+const def = sectionById.get(id);
+const isVideo = media?.src ? /\.(mp4|webm)(\?|$)/i.test(media.src) : false;
+const hasFallback = Astro.slots.has('fallback');
+---
+<header class="shero">
+  <div class="shero__media" aria-hidden="true">
+    {media?.src && isVideo && <video src={media.src} autoplay muted loop playsinline preload="metadata"></video>}
+    {media?.src && !isVideo && <img src={media.src} alt={media.alt ?? ''} />}
+    {!media?.src && hasFallback && <slot name="fallback" />}
+    {!media?.src && !hasFallback && def && (
+      <div class="shero-num"><span>{String(def.n).padStart(2, '0')}</span></div>
+    )}
+  </div>
+  <div class="shero__body">
+    {def && <span class="shero__pill" data-reveal>{def.n} · {def.category.label}</span>}
+    <h2 class="shero__title section__title" data-reveal>{title ?? def?.label ?? id}</h2>
+    {(lede ?? def?.about) && <p class="shero__lede" data-reveal>{lede ?? def?.about}</p>}
+  </div>
+</header>

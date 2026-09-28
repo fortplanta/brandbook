@@ -1,12 +1,13 @@
 ---
-import SectionHead from '../SectionHead.astro';
+import SectionHero from '../SectionHero.astro';
 import type { ImageItem } from '../../content/profile';
 interface Props { note?: string; images: ImageItem[]; }
 const { note, images } = Astro.props;
 ---
-<section class="section" id="imagery">
+<section class="section sect" id="imagery">
+  <SectionHero id="imagery" lede={note} media={images[0] ? { src: images[0].src, alt: images[0].caption } : undefined} />
+  <div class="sect__body">
   <div class="wrap">
-    <SectionHead id="imagery" note={note} />
   </div>
 
   <div class="imagery bleedgrid">
@@ -17,4 +18,5 @@ const { note, images } = Astro.props;
       </figure>
     ))}
   </div>
+</div>
 </section>

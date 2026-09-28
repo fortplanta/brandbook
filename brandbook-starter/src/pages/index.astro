@@ -3,6 +3,8 @@ import BrandbookLayout from '../layouts/BrandbookLayout.astro';
 import SideNav from '../components/SideNav.astro';
 import Cover from '../components/sections/Cover.astro';
 import Placeholder from '../components/sections/Placeholder.astro';
+import CategoryHero from '../components/CategoryHero.astro';
+import SectionHero from '../components/SectionHero.astro';
 // I. Varumärkesplattform
 import Introduktion from '../components/sections/Introduktion.astro';
 import VisionMission from '../components/sections/VisionMission.astro';
@@ -57,19 +59,42 @@ const has: Record<string, boolean> = {
   versionshistorik: (profile.changelog?.length ?? 0) > 0,
 };
 
+// Short brand line for generated posters (colour guide): the first sentence of
+// the first platform block, else the tagline, else the client name.
+const posterText = (profile.platform?.[0]?.body.match(/^[^.!?]+[.!?]/)?.[0] ?? profile.tagline ?? profile.client).trim();
+
 // Apply the client's visibility settings to the template structure.
 const structure = resolveStructure((id) => Boolean(has[id]), profile.visibility, profile.hideEmpty);
 
-// Sidebar model: locked categories/sections stay as greyed teasers.
-const nav = structure.map((cat) => ({
-  id: cat.id,
-  label: cat.label,
-  locked: cat.locked,
-  items: cat.sections.map((s) => ({ id: s.id, label: s.label, locked: s.locked })),
-}));
+// Sidebar model — progressive disclosure: pages in page order, each flagged
+// `primary` (always visible) or not (behind "+ N till"). A section with ≤ 4
+// visible pages shows them all; if a client hid primaries, the next pages in
+// order are promoted so at least 3 show. `inNav: false` pages stay on the page
+// but only get a hidden marker in the sidebar (so scroll tracking still maps
+// them to their category). Locked categories/pages stay as greyed teasers.
+const nav = structure.map((cat) => {
+  const listed = cat.sections.filter((s) => s.inNav !== false);
+  const primary = new Set(listed.length <= 4 ? listed.map((s) => s.id) : listed.filter((s) => s.primary).map((s) => s.id));
+  for (const s of listed) { if (primary.size >= 3) break; primary.add(s.id); }
+  return {
+    id: cat.id,
+    label: cat.label,
+    locked: cat.locked,
+    items: cat.sections.map((s) => ({
+      id: s.id, label: s.label, locked: s.locked,
+      primary: primary.has(s.id), hidden: s.inNav === false,
+    })),
+  };
+});
+const historyHref = structure.some((c) => c.sections.some((s) => s.id === 'versionshistorik' && !s.locked)) && (profile.changelog?.length ?? 0) > 0
+  ? '#versionshistorik' : undefined;
 
-// The ordered sections to render on the page (locked ones only tease in the nav).
-const sections = structure.flatMap((cat) => cat.sections.filter((s) => !s.locked));
+// The page: each category with something to show opens with its chapter hero,
+// then its sections in order (locked ones only tease in the nav).
+const chapters = structure
+  .filter((cat) => !cat.locked)
+  .map((cat) => ({ cat, sections: cat.sections.filter((s) => !s.locked) }))
+  .filter((c) => c.sections.length > 0);
 ---
 
 <BrandbookLayout title={`${profile.client} — Brandbook`} description={profile.tagline} accent={profile.accent}>
@@ -79,46 +104,57 @@ const sections = structure.flatMap((cat) => cat.sections.filter((s) => !s.locked
     updated={profile.updated}
     nav={nav}
     downloadAllHref={profile.downloadAllHref}
-    changelog={profile.changelog}
+    historyHref={historyHref}
   />
 
-  <Cover client={profile.client} tagline={profile.tagline} note={profile.cover?.note} />
+  <Cover client={profile.client} tagline={profile.tagline} note={profile.cover?.note} background={profile.cover?.background} />
 
-  {sections.map(({ id, filled }) => (
+  {chapters.map(({ cat, sections }) => (
     <>
-      {/* I. Varumärkesplattform */}
-      {id === 'introduktion' && <Introduktion />}
-      {id === 'vision-mission' && <VisionMission />}
-      {id === 'karnvarden' && <Karnvarden />}
-      {id === 'manifest' && <Manifest />}
-      {id === 'positionering' && (filled ? <Platform platform={profile.platform} /> : <Placeholder id={id} />)}
-      {id === 'personlighet' && <Personlighet />}
-      {id === 'tonalitet' && (filled && profile.tone ? <Tone tone={profile.tone} /> : <Placeholder id={id} />)}
-      {id === 'brand-story' && <BrandStory />}
-      {id === 'malgrupper' && <Malgrupper />}
-      {/* II. Visuell identitet */}
-      {id === 'logos' && (filled ? <LogotypesSection /> : <Placeholder id={id} />)}
-      {id === 'colors' && (filled ? <Colors colors={profile.colors} typography={profile.typography} /> : <Placeholder id={id} />)}
-      {id === 'typography' && (filled ? <Typography typography={profile.typography} /> : <Placeholder id={id} />)}
-      {id === 'grafiska-element' && <GrafiskaElement />}
-      {id === 'imagery' && (filled ? <Imagery note={profile.imagery.note} images={profile.imagery.images} /> : <Placeholder id={id} />)}
-      {id === 'layout-grid' && <LayoutGrid />}
-      {id === 'ikonografi' && <Ikonografi />}
-      {id === 'illustration' && <Illustration />}
-      {/* III. Rörligt & ljud */}
-      {id === 'motion' && (filled ? <Motion motion={profile.motion} /> : <Placeholder id={id} />)}
-      {id === 'video' && <Video />}
-      {id === 'ljud-id' && <LjudId />}
-      {/* IV. Tillämpning */}
-      {id === 'digitalt' && <Digitalt />}
-      {id === 'print' && <Print />}
-      {id === 'co-branding' && <CoBranding />}
-      {id === 'merch' && <Merch />}
-      {id === 'exempel' && <Exempel />}
-      {/* V. Resurser & governance */}
-      {id === 'downloads' && (filled ? <Downloads downloads={profile.downloads} downloadAllHref={profile.downloadAllHref} /> : <Placeholder id={id} />)}
-      {id === 'kontakt' && <Kontakt />}
-      {id === 'versionshistorik' && (filled ? <Versionshistorik changelog={profile.changelog ?? []} /> : <Placeholder id={id} />)}
+      <CategoryHero category={cat} colors={profile.colors} downloads={profile.downloads} changelog={profile.changelog} />
+      {sections.map(({ id, filled }) => (
+      <>
+        {/* I. Varumärkesplattform */}
+        {id === 'introduktion' && <Introduktion />}
+        {id === 'vision-mission' && <VisionMission />}
+        {id === 'karnvarden' && <Karnvarden />}
+        {id === 'manifest' && <Manifest />}
+        {id === 'positionering' && (filled ? <Platform platform={profile.platform} /> : <Placeholder id={id} />)}
+        {id === 'personlighet' && <Personlighet />}
+        {id === 'tonalitet' && (filled && profile.tone ? <Tone tone={profile.tone} /> : <Placeholder id={id} />)}
+        {id === 'brand-story' && <BrandStory />}
+        {id === 'malgrupper' && <Malgrupper />}
+        {/* II. Visuell identitet */}
+        {id === 'logos' && (filled ? (
+        <LogotypesSection>
+          <SectionHero slot="hero" id="logos">
+            <div class="shero-logo" slot="fallback"><img src={profile.logos[0].image} alt="" /></div>
+          </SectionHero>
+        </LogotypesSection>
+      ) : <Placeholder id={id} />)}
+        {id === 'colors' && (filled ? <Colors colors={profile.colors} typography={profile.typography} guide={profile.colorGuide} client={profile.client} text={posterText} /> : <Placeholder id={id} />)}
+        {id === 'typography' && (filled ? <Typography typography={profile.typography} /> : <Placeholder id={id} />)}
+        {id === 'grafiska-element' && <GrafiskaElement />}
+        {id === 'imagery' && (filled ? <Imagery note={profile.imagery.note} images={profile.imagery.images} /> : <Placeholder id={id} />)}
+        {id === 'layout-grid' && <LayoutGrid />}
+        {id === 'ikonografi' && <Ikonografi />}
+        {id === 'illustration' && <Illustration />}
+        {/* III. Rörligt & ljud */}
+        {id === 'motion' && (filled ? <Motion motion={profile.motion} /> : <Placeholder id={id} />)}
+        {id === 'video' && <Video />}
+        {id === 'ljud-id' && <LjudId />}
+        {/* IV. Tillämpning */}
+        {id === 'digitalt' && <Digitalt />}
+        {id === 'print' && <Print />}
+        {id === 'co-branding' && <CoBranding />}
+        {id === 'merch' && <Merch />}
+        {id === 'exempel' && <Exempel />}
+        {/* V. Resurser & governance */}
+        {id === 'downloads' && (filled ? <Downloads downloads={profile.downloads} downloadAllHref={profile.downloadAllHref} /> : <Placeholder id={id} />)}
+        {id === 'kontakt' && <Kontakt />}
+        {id === 'versionshistorik' && (filled ? <Versionshistorik changelog={profile.changelog ?? []} /> : <Placeholder id={id} />)}
+      </>
+      ))}
     </>
   ))}
 </BrandbookLayout>

@@ -1,0 +1,30 @@
+---
+/* A palette swatch card (Figma: 592×360): name top-left, role top-right, specs
+   bottom-left, and a "Kopiera HEX" affordance bottom-right that primes the
+   click — it inverts on hover/focus and flips to a check + "Kopierat" once
+   copied. Text colour is picked for contrast. */
+import type { Color } from '../../content/profile';
+import CopyGlyph from '../CopyGlyph.astro';
+import { readableOn } from '../../lib/color';
+import { contrastRatio, rate, fmtRatio } from '../../lib/contrast';
+interface Props { color: Color; i: number }
+const { color: c, i } = Astro.props;
+const fg = readableOn(c.hex);
+const ratio = contrastRatio(c.hex, fg);
+---
+<button class="cg-card cg-card--copy" type="button" data-copy={c.hex} style={`--c:${c.hex};--fg:${fg};--i:${i}`} aria-label={`Kopiera ${c.name} ${c.hex}`}>
+  <span class="cg-card__top">
+    <span class="cg-card__name">{c.name}</span>
+    {c.role && <span>{c.role}</span>}
+  </span>
+  <span class="cg-card__foot">
+    <span class="cg-card__spec">
+      <span>HEX {c.hex.toUpperCase()}</span>
+      {c.rgb && <span>RGB {c.rgb}</span>}
+      {c.cmyk && <span>CMYK {c.cmyk}</span>}
+      {c.pantone && <span>PMS {c.pantone}</span>}
+      <span class="cg-card__aa">Text {fmtRatio(ratio)} · {rate(ratio) === 'low' ? 'låg' : rate(ratio)}</span>
+    </span>
+    <span class="cg-copy" aria-hidden="true"><CopyGlyph /><span data-copy-label>Kopiera HEX</span></span>
+  </span>
+</button>

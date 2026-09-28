@@ -1,15 +1,29 @@
 ---
-interface Props { client: string; tagline?: string; note?: string; }
-const { client, tagline, note } = Astro.props;
+/* Cover — cinematic top hero. The section is two screens tall; the title block
+   sticks (bottom-left) through the first screen, then scrolls away, while the
+   media layer behind it moves at ~0.7× scroll speed (parallax, set in
+   enhance.ts). Media: `cover.background` in profile.ts (an image, or a video
+   if it ends in .mp4/.webm); without one, a slow-drifting brand-colour glow. */
+interface Props { client: string; tagline?: string; note?: string; background?: string; }
+const { client, tagline, note, background } = Astro.props;
+const isVideo = background ? /\.(mp4|webm)(\?|$)/i.test(background) : false;
 ---
-<section class="section cover" id="cover">
-  <div class="wrap">
-    <h1 class="cover__title">{client}</h1>
-    {tagline && <p class="cover__tagline">{tagline}</p>}
-    {note && <p class="cover__note">{note}</p>}
+<section class="section cover" id="cover" data-cover>
+  <div class="cover__media" aria-hidden="true" data-cover-media>
+    {background && isVideo && <video class="cover__asset" src={background} autoplay muted loop playsinline preload="metadata"></video>}
+    {background && !isVideo && <img class="cover__asset" src={background} alt="" />}
+    {!background && <div class="cover__glow"></div>}
   </div>
-  <span class="cover__cue" aria-hidden="true">
-    Scrolla
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
-  </span>
+
+  <div class="cover__sticky">
+    <div class="wrap">
+      <h1 class="cover__title">{client}</h1>
+      {tagline && <p class="cover__tagline">{tagline}</p>}
+      {note && <p class="cover__note">{note}</p>}
+    </div>
+    <span class="cover__cue" aria-hidden="true">
+      Scrolla
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>
+    </span>
+  </div>
 </section>

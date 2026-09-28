@@ -1,0 +1,23 @@
+---
+/* An approved combination: the background colour with type in its partner,
+   plus the measured contrast. */
+import type { Color } from '../../content/profile';
+import { contrastRatio, rate, fmtRatio } from '../../lib/contrast';
+interface Props { bg: Color; fg: Color; i: number; note?: string }
+const { bg, fg, i, note } = Astro.props;
+const ratio = contrastRatio(bg.hex, fg.hex);
+---
+<div class="cg-card cg-card--pair" style={`--c:${bg.hex};--fg:${fg.hex};--i:${i}`}>
+  <span class="cg-card__top">
+    <span>{bg.name}</span>
+    <span>{fg.name}</span>
+  </span>
+  <span class="cg-card__glyph" aria-hidden="true">Aa</span>
+  <span class="cg-card__foot">
+    <span class="cg-card__spec">
+      <span>{bg.hex.toUpperCase()} / {fg.hex.toUpperCase()}</span>
+      <span>Kontrast {fmtRatio(ratio)} · {rate(ratio) === 'low' ? 'låg — endast stor text' : rate(ratio)}</span>
+      {note && <span>{note}</span>}
+    </span>
+  </span>
+</div>

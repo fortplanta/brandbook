@@ -48,6 +48,7 @@ const variantOrder = ['primary', 'symbol', 'stacked', 'mono', 'inverse', 'clears
 const total = String(frames.length).padStart(2, '0');
 ---
 <section class="lt-chapter" id="logos" aria-label="Logotyper" data-lt-chapter>
+  <slot name="hero" /><!-- the shared section hero (SectionHero), passed in from the page -->
   <div class="lt-grid">
     <!-- LEFT — REAL scrolling frames -->
     <div class="lt-frames">
