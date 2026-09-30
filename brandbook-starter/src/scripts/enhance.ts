@@ -175,6 +175,7 @@ interface ChapterState {
   el: HTMLElement; stage: HTMLElement | null; fx: HTMLElement | null;
   curtains: HTMLElement[]; top: number; h: number;
   out: { open: string; lag: string; fx: string };
+  stick: HTMLElement | null; stickOn: boolean;   // the category's sticky pill
 }
 const chapterState: ChapterState[] = chapters.map((el) => ({
   el,
@@ -183,6 +184,7 @@ const chapterState: ChapterState[] = chapters.map((el) => ({
   curtains: Array.from(el.querySelectorAll<HTMLElement>('.chapter__curtain')),
   top: 0, h: 0,
   out: { open: '', lag: '', fx: '' },
+  stick: el.closest('[data-catwrap]')?.querySelector<HTMLElement>('.catstick') ?? null, stickOn: false,
 }));
 const cover = document.querySelector<HTMLElement>('[data-cover]');
 const coverMedia = cover?.querySelector<HTMLElement>('[data-cover-media]') ?? null;
@@ -194,6 +196,10 @@ const measureSections = () => {
     c.h = c.el.offsetHeight;
   }
   coverH = cover?.offsetHeight ?? 0;
+  // mobile: the nav is a top bar; the sticky category pill sits just under it
+  if (drawer && window.matchMedia('(max-width: 900px)').matches) {
+    document.documentElement.style.setProperty('--topbar-h', `${drawer.offsetHeight}px`);
+  }
 };
 measureSections();
 if ('ResizeObserver' in window) new ResizeObserver(() => { measureSections(); }).observe(document.body);
@@ -231,6 +237,15 @@ function onScroll() {
   ticking = false;
   if (drawer) drawer.toggleAttribute('data-min', window.scrollY > window.innerHeight * MINIMIZE_AT);
   driveLogoChapter();
+
+  // Category indicator: each chapter's sticky pill (.catstick, plain CSS sticky)
+  // shows once its hero has scrolled past the top, and hides again above it.
+  // Decided from cached positions (not an IntersectionObserver) so it's right
+  // even after a jump — e.g. a sidebar click straight to a page.
+  for (const c of chapterState) {
+    const on = window.scrollY > c.top + c.h - 40;
+    if (c.stick && c.stickOn !== on) { c.stickOn = on; c.stick.classList.toggle('is-on', on); }
+  }
 
   if (motion) {
     const y = window.scrollY, vh = window.innerHeight;
@@ -719,3 +734,31 @@ document.querySelectorAll<HTMLElement>('[data-stories]').forEach((root) => {
   document.addEventListener('visibilitychange', run);
   go(0);
 });
+
+/* 9. Why-dialog — clicking a greyed "Saknas" section in the sidebar explains
+      what that section is for (copy from categories.ts via SideNav). */
+(() => {
+  const box = document.querySelector<HTMLDialogElement>('[data-whybox]');
+  const raw = box?.querySelector('[data-why-copy]')?.textContent;
+  if (!box || !raw || typeof box.showModal !== 'function') return;
+  const copy = JSON.parse(raw) as Record<string, { label: string; n?: number; category?: string; missing?: string; why?: string }>;
+  const set = (sel: string, text: string) => { const el = box.querySelector(sel); if (el) el.textContent = text; };
+  document.querySelectorAll<HTMLElement>('[data-why]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const c = copy[btn.dataset.why!];
+      if (!c) return;
+      set('[data-why-kicker]', [c.n, c.category].filter(Boolean).join(' · '));
+      set('[data-why-title]', c.label);
+      set('[data-why-lead]', c.missing ? `Det ser ut som att er brandbook saknar ${c.missing}.` : '');
+      set('[data-why-body]', c.why ?? '');
+      box.showModal();
+    });
+  });
+  box.querySelector('[data-why-close]')?.addEventListener('click', () => box.close());
+  // a click outside the dialog's box (on the backdrop) closes it
+  box.addEventListener('click', (e) => {
+    const r = box.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) box.close();
+  });
+})();

@@ -48,6 +48,13 @@ export const t = {
     title: 'Ändringshistorik',
     empty: 'Inga ändringar loggade ännu.',
   },
+  empty: {
+    tag: 'Saknas',                        // sidebar label on sections without content
+    hover: 'Varför?',                     // …what it becomes on hover (it opens the dialog)
+    lead: 'Det ser ut som att er brandbook saknar',
+    cta: 'Prata med oss om det',
+    ctaHref: 'https://ohmy.se',
+  },
   locked: {
     hint: 'Ingår inte ännu',              // shown on greyed teaser categories
     aria: 'Låst — ingår inte i den här profilen ännu',

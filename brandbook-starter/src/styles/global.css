@@ -82,6 +82,7 @@ img, video { display: block; max-width: 100%; }
   font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-muted);
   background: var(--color-sink); border-radius: 999px; padding: 0.2rem 0.6rem;
 }
+.placeholder__lead { margin: 0; font-weight: 600; line-height: 1.45; }
 .placeholder__about { margin: 0; color: var(--color-muted); line-height: 1.55; }
 
 /* 28 Versionshistorik */
@@ -91,6 +92,37 @@ img, video { display: block; max-width: 100%; }
 .history__date { font-family: var(--font-mono); font-size: 0.85rem; color: var(--color-muted); padding-top: 0.1rem; }
 .history__note { margin: 0; line-height: 1.5; }
 @media (max-width: 560px) { .history__item { grid-template-columns: 1fr; gap: 0.2rem; } }
+
+/* ============================================================================
+   CATEGORY INDICATOR — "you are here". Each category (chapter hero + its
+   pages) is one .catwrap; right after the hero sits a zero-height sticky
+   anchor whose pill rides up with the page, sticks top-left while the
+   category's pages scroll by, and is pushed out when the wrapper ends — then
+   the next category's pill takes over. Pure CSS; takes no layout space. No
+   ancestor may clip overflow, or sticky stops working.
+   ========================================================================== */
+.catwrap { position: relative; }
+.catstick { position: sticky; top: var(--drawer-x); z-index: 40; height: 0; padding-left: var(--gutter); pointer-events: none; }
+/* under the mobile top bar — its real height is measured into --topbar-h */
+@media (max-width: 900px) { .catstick { top: calc(var(--topbar-h, 5.5rem) + 0.5rem); } }
+.catpill {
+  display: inline-flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem; padding: 0.3rem 0.75rem 0.3rem 0.3rem;
+  border-radius: 999px; background: var(--color-paper); color: var(--color-ink); text-decoration: none; pointer-events: auto;
+  font-size: 0.8rem; font-weight: 600; letter-spacing: -0.005em; white-space: nowrap;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.4), inset 0 0 0 1px color-mix(in oklab, var(--color-ink) 8%, transparent);
+  transition: box-shadow 160ms ease;
+}
+.catpill__num {
+  display: grid; place-items: center; min-width: 1.6rem; height: 1.6rem; padding: 0 0.4rem; border-radius: 999px;
+  background: var(--color-ink); color: var(--color-paper); font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.04em;
+}
+@media (hover: hover) and (pointer: fine) { .catpill:hover { box-shadow: 0 10px 28px -12px rgba(0, 0, 0, 0.5), inset 0 0 0 1px color-mix(in oklab, var(--color-ink) 16%, transparent); } }
+/* Shown only once the chapter hero has scrolled past (enhance.ts toggles
+   .is-on) — fades in rather than riding up over the hero. Without JS: always. */
+html.js .catpill { opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity 220ms var(--ease-out), transform 260ms var(--ease-out), box-shadow 160ms ease; }
+html.js .catstick.is-on .catpill { opacity: 1; transform: none; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { html.js .catpill { transform: none; } }
+@media print { .catstick { display: none; } }
 
 /* ============================================================================
    CHAPTER HEROES — a full-screen break that opens each category
@@ -463,6 +495,45 @@ html.js .cat[data-open="true"] .cat__list { height: var(--cat-h, auto); }
 .cat--locked .cat__head { color: var(--color-muted); cursor: default; opacity: 0.72; }
 .cat--locked .cat__dot { opacity: 0.35; }
 .nav__link--locked { cursor: default; opacity: 0.5; }
+
+/* Empty section (no content yet): greyed, doesn't navigate — "Saknas" turns
+   into "Varför?" on hover/focus and opens the why-dialog. */
+.nav__link--empty { width: 100%; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; opacity: 0.5; transition: opacity 0.15s ease, color 0.15s ease, background 0.2s ease; }
+.nav__na { margin-left: auto; padding-left: 0.5rem; font-size: 0.72rem; font-weight: 400; color: var(--color-muted); white-space: nowrap; }
+.nav__na-hover { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .nav__link--empty:hover { opacity: 0.9; }
+  .nav__link--empty:hover .nav__na-idle { display: none; }
+  .nav__link--empty:hover .nav__na-hover { display: inline; color: var(--color-ink); }
+}
+.nav__link--empty:focus-visible { opacity: 0.9; }
+.nav__link--empty:focus-visible .nav__na-idle { display: none; }
+.nav__link--empty:focus-visible .nav__na-hover { display: inline; color: var(--color-ink); }
+/* no hover on touch: keep "Saknas" readable */
+@media (hover: none) { .nav__link--empty { opacity: 0.6; } }
+
+/* Why-dialog (native <dialog>, SideNav.astro) */
+.whybox {
+  margin: auto;   /* the global reset zeroes margins — native dialogs centre via margin:auto */
+  width: min(32rem, calc(100% - 2rem)); padding: clamp(1.5rem, 4vw, 2.25rem); border: 0; border-radius: 16px;
+  background: var(--color-paper); color: var(--color-ink); box-shadow: 0 40px 100px -30px rgba(0, 0, 0, 0.5);
+}
+.whybox::backdrop { background: color-mix(in oklab, var(--color-ink) 45%, transparent); }
+.whybox[open] { animation: whybox-in 260ms var(--ease-out); }
+@keyframes whybox-in { from { opacity: 0; transform: translateY(10px) scale(0.98); } }
+@media (prefers-reduced-motion: reduce) { .whybox[open] { animation: none; } }
+.whybox__kicker { margin: 0 0 0.6rem; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-muted); }
+.whybox__title { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.whybox__lead { margin: 1rem 0 0; font-size: 1.05rem; font-weight: 600; line-height: 1.45; }
+.whybox__body { margin: 0.6rem 0 0; line-height: 1.6; color: color-mix(in oklab, var(--color-ink) 75%, transparent); }
+.whybox__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; margin-top: 1.75rem; }
+.whybox .whybox__cta { background: var(--color-ink); color: var(--color-paper); }
+@media (hover: hover) and (pointer: fine) { .whybox .whybox__cta:hover { background: var(--color-brand); color: #fff; } }
+.whybox__close { border: 0; background: none; padding: 0.4rem 0; font: inherit; font-size: 0.9rem; color: var(--color-muted); cursor: pointer; }
+@media (hover: hover) and (pointer: fine) { .whybox__close:hover { color: var(--color-ink); } }
+.whybox__close:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: 4px; }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 @media (hover: hover) and (pointer: fine) { .nav__link--locked:hover { color: var(--color-muted); background: none; } }
 .cat__hint { font-size: 0.68rem; color: var(--color-muted); margin-left: auto; white-space: nowrap; transition: opacity 0.3s ease, max-width 0.35s ease; }
 .cat__lock { flex: none; width: 13px; height: 13px; color: var(--color-muted); opacity: 0.7; transition: opacity 0.3s ease, max-width 0.35s ease; }
@@ -786,6 +857,15 @@ html:not(.anim) .cg-marquee__item[aria-hidden="true"] { display: none; }
 .cg-stage__label { margin: 0; font-size: 0.85rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .cg-stage__body { margin: 0; max-width: 40rem; line-height: 1.55; color: color-mix(in oklab, var(--color-ink) 78%, transparent); }
 .cg-stage .cg-stories { margin-top: 1.5rem; }
+
+/* Gallery sections (MediaSection.astro) — applications, graphics */
+.gal { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(0.75rem, 1.25vw, 1.5rem); }
+@media (max-width: 900px) { .gal { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .gal { grid-template-columns: 1fr; } }
+.gal__item { margin: 0; }
+.gal__media { aspect-ratio: 4 / 3; }
+.gal__cap { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.6rem; font-size: 0.85rem; color: var(--color-muted); }
+.gal__tag { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-ink); opacity: 0.6; }
 
 /* Misuse — an example with a red strike, and the rule */
 .cg-mis { margin: 0; }

@@ -27,6 +27,10 @@ At the top of every client's edit view there's a **drop zone**. Drag files from
 disk, or paste (⌘V) — hex codes, SVGs, fonts, images, video, zips, CSS/JSON token
 dumps. The engine (`src/ingest/classify.js`) detects what each thing is and routes
 it to the matching field: colours, logos, typography, imagery, motion, downloads.
+Images are also *looked at* by a local, open-source model (nothing leaves the
+server) and sorted into logos, colour-in-use, applications (digital/print/
+environment/merch), graphics or photography — then renamed and tagged. Uncertain
+ones wait for you with suggestions; see `src/ingest/README.md`.
 Prose it never guesses — it holds a pasted paragraph in a "needs your choice" tray
 for you to place (tagline / platform / boilerplate / cover note).
 

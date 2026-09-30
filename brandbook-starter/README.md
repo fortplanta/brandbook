@@ -32,6 +32,7 @@ The wiring is three small files, and no component changes:
 
 - `src/lib/loadProfile.ts` — the switch: fetch-from-CMS or local file, returns `Profile`.
 - `src/lib/payloadMap.ts` — maps one Payload `clients` document to `Profile` (unwraps uploaded files to absolute URLs, normalises dates).
+  It also carries what the CMS drop zone sorts images and videos into: `keyVisual` → the cover background; `applications` → the Tillämpning galleries by kind (digital → Digitala applikationer, print → Print-applikationer, merch → Profilprodukter & merch, environment/example → Exempel i verkligheten); `colorInUse` → the colour section's "in use" marquee (shown on its own when no colours are saved); `graphics` → Grafiska element; a logo that's a video → the Logotyp hero.
 - `src/content/categories.ts` — the template structure (categories + numbered sections), kept in the repo because it's agency structure, not per-client content.
 
 Because content is pulled at **build time**, the CMS is never a runtime dependency: a published book is static and keeps serving even if the CMS is offline. Publishing in the CMS triggers a rebuild of that one client's site (a deploy webhook). Full setup, the per-client editor roles, and the SQLite-now / Postgres-later path are in `brandbook-cms/README.md`.

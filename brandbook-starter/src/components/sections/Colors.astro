@@ -3,8 +3,10 @@
    brand-colors page): section hero → intro (+ optional media) → per palette:
    swatch cards + "in use" marquee → approved combinations + stories slideshow →
    tints → colour in context (stages, each with a slideshow) → misuse.
-   Content comes from `colorGuide` in profile.ts; without one, the flat `colors`
-   list becomes a single palette. Grids of 3+ columns stagger in on first
+   Content comes from `colorGuide` in profile.ts; without one (CMS clients), the
+   flat `colors` list becomes a single palette and the CMS's `colorInUse`
+   artwork becomes its "in use" marquee — or, with no saved colours at all,
+   a marquee on its own. Grids of 3+ columns stagger in on first
    reveal ([data-stagger]); marquee, stories and copy are wired in enhance.ts. */
 import SectionHero from '../SectionHero.astro';
 import ResourceBar from '../ResourceBar.astro';
@@ -17,12 +19,21 @@ import Stories from '../color/Stories.astro';
 import { t } from '../../lib/strings';
 import { buildTokens } from '../../lib/tokens';
 import { resolveColor, tintScale, rotateHue, lowestContrastPair, readableOn, mix } from '../../lib/color';
-import type { Color, Typeface, ColorGuide } from '../../content/profile';
+import type { Color, Typeface, ColorGuide, ColorInUseItem } from '../../content/profile';
 
-interface Props { colors: Color[]; typography?: Typeface[]; guide?: ColorGuide; client: string; text: string }
-const { colors, typography = [], guide: given, client, text } = Astro.props;
+interface Props { colors: Color[]; typography?: Typeface[]; guide?: ColorGuide; colorInUse?: ColorInUseItem[]; client: string; text: string }
+const { colors, typography = [], guide: given, colorInUse = [], client, text } = Astro.props;
 
-const guide: ColorGuide = given ?? { palettes: [{ title: 'Palett', colors: colors.map((c) => c.name) }] };
+// CMS artwork showing the palette in use — captioned with the colours it uses.
+const inUseMedia = colorInUse.map((c) => ({ src: c.src, caption: c.colors || c.caption }));
+const guide: ColorGuide = given ?? {
+  hero: inUseMedia[0] ? { media: { src: inUseMedia[0].src } } : undefined,
+  palettes: colors.length
+    ? [{ title: 'Palett', colors: colors.map((c) => c.name), inUse: inUseMedia.length ? { title: 'Färgen i bruk', media: inUseMedia } : undefined }]
+    : [],
+};
+// No saved colours, but artwork in the brand colours: show that on its own.
+const looseInUse = !colors.length && inUseMedia.length ? inUseMedia : null;
 const res = (ref: string) => resolveColor(ref, colors);
 const palettes = guide.palettes.map((p) => ({ ...p, swatches: p.colors.map(res) }));
 const primary = palettes[0]?.swatches ?? colors;
@@ -56,6 +67,14 @@ const distribution = [...primary.map((c) => ({ c, w: 3 })), ...secondary.map((c)
         <p class="cg-intro__lead" data-reveal>{guide.intro.lead}</p>
         {guide.intro.body && <p class="cg-body" data-reveal>{guide.intro.body}</p>}
         {guide.intro.media && <Media item={guide.intro.media} {...media} class="cg-showcase" />}
+      </div>
+    )}
+
+    {looseInUse && (
+      <div class="cg-block">
+        <h3 class="cg-h">Färg i bruk</h3>
+        <p class="cg-body">Varumärkets färger som de används i praktiken. Lägg till palettens färgvärden i CMS:et så visas kort med HEX, RGB och kontraster här.</p>
+        <Marquee items={looseInUse} {...media} label="Färg i bruk" />
       </div>
     )}
 
@@ -161,6 +180,7 @@ const distribution = [...primary.map((c) => ({ c, w: 3 })), ...secondary.map((c)
         </div>
       </div>
     )}
+    {colors.length > 0 && (
     <div class="cg-block">
       <ResourceBar title={t.tokens.label} hint={t.tokens.hint} kind="code">
         {[['CSS', tokens.css], ['JSON', tokens.json], ['Tailwind', tokens.tailwind]].map(([name, value]) => (
@@ -170,5 +190,6 @@ const distribution = [...primary.map((c) => ({ c, w: 3 })), ...secondary.map((c)
         ))}
       </ResourceBar>
     </div>
+    )}
   </div>
 </section>

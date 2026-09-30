@@ -1,2 +1,8 @@
+allowBuilds:
+  esbuild: true
+  # onnxruntime-node ships macOS/Linux CPU binaries in the package; its script only
+  # fetches CUDA binaries. protobufjs' script is housekeeping. Neither is needed.
+  onnxruntime-node: false
+  protobufjs: false
 onlyBuiltDependencies:
   - esbuild

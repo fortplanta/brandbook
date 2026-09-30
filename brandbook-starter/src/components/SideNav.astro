@@ -4,8 +4,9 @@
    (enhance.ts also opens it when you scroll into one of them). Footer tools are
    a single quiet row of icon buttons. */
 import { t } from '../lib/strings';
+import { sectionById } from '../content/categories';
 
-interface NavItem { id: string; label: string; locked?: boolean; primary?: boolean; hidden?: boolean; }
+interface NavItem { id: string; label: string; locked?: boolean; primary?: boolean; hidden?: boolean; empty?: boolean; }
 interface NavCat { id: string; label: string; locked?: boolean; items: NavItem[]; }
 interface Props {
   client: string;
@@ -15,6 +16,12 @@ interface Props {
   historyHref?: string;
 }
 const { client, updated, nav, downloadAllHref, historyHref } = Astro.props;
+
+// Copy for the "why this matters" dialog, for every section without content.
+const why = Object.fromEntries(nav.flatMap((c) => c.items).filter((it) => it.empty).map((it) => {
+  const def = sectionById.get(it.id);
+  return [it.id, { label: it.label, n: def?.n, category: def?.category.label, missing: def?.missing, why: def?.why }];
+}));
 const initial = client.trim().charAt(0).toUpperCase();
 ---
 
@@ -64,6 +71,14 @@ const initial = client.trim().charAt(0).toUpperCase();
                         <span class="nav__link nav__link--locked" aria-disabled="true" title={t.locked.aria}>
                           <span class="nav__linklabel">{it.label}</span>
                         </span>
+                      ) : it.empty ? (
+                        /* no content yet: greyed, doesn't navigate — opens the why-dialog.
+                           Keeps data-nav-link so scroll tracking still maps it. */
+                        <button class="nav__link nav__link--empty" type="button" data-why={it.id} data-nav-link={it.id} aria-haspopup="dialog">
+                          <span class="nav__linklabel">{it.label}</span>
+                          <span class="nav__na" aria-hidden="true"><span class="nav__na-idle">{t.empty.tag}</span><span class="nav__na-hover">{t.empty.hover}</span></span>
+                          <span class="sr-only">— {t.empty.tag}</span>
+                        </button>
                       ) : (
                         <a class="nav__link" href={`#${it.id}`} data-nav-link={it.id}>
                           <span class="nav__linklabel">{it.label}</span>
@@ -114,3 +129,17 @@ const initial = client.trim().charAt(0).toUpperCase();
     </div>
   </div>
 </nav>
+
+{Object.keys(why).length > 0 && (
+  <dialog class="whybox" data-whybox aria-labelledby="whybox-title">
+    <p class="whybox__kicker" data-why-kicker></p>
+    <h2 class="whybox__title" id="whybox-title" data-why-title></h2>
+    <p class="whybox__lead" data-why-lead></p>
+    <p class="whybox__body" data-why-body></p>
+    <div class="whybox__actions">
+      <a class="rbtn whybox__cta" href={t.empty.ctaHref} target="_blank" rel="noopener">{t.empty.cta}</a>
+      <button class="whybox__close" type="button" data-why-close>{t.actions.close}</button>
+    </div>
+    <script type="application/json" data-why-copy set:html={JSON.stringify(why)} />
+  </dialog>
+)}

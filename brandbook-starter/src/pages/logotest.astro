@@ -1,5 +1,7 @@
 ---
 import LogotypesSection from '../components/sections/LogotypesSection.astro';
+import { loadProfile } from '../lib/loadProfile';
+const profile = await loadProfile();
 ---
 <!doctype html>
 <html lang="sv">
@@ -20,7 +22,7 @@ import LogotypesSection from '../components/sections/LogotypesSection.astro';
   </head>
   <body>
     <div class="band">↑ vanlig lång sektion — scrolla NER i normal takt rakt in i kapitlet<br/>(du ska aldrig behöva "träffa" det)</div>
-    <LogotypesSection />
+    <LogotypesSection logos={profile.logos} />
     <div class="band">↓ vanlig sektion fortsätter — kapitlet släppte taget av sig självt</div>
   </body>
 </html>

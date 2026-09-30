@@ -1,0 +1,29 @@
+---
+/* A media gallery section — used by the sections that are mostly examples:
+   Digitala / Print-applikationer, Profilprodukter & merch, Exempel i
+   verkligheten, Grafiska element. Filled from the CMS (the drop zone sorts
+   images and videos into them). The first item doubles as the section hero;
+   the grid staggers in on first reveal; videos loop inline, muted. */
+import SectionHero from '../SectionHero.astro';
+import Media from '../color/Media.astro';
+interface Item { src: string; caption?: string }
+interface Props { id: string; items: Item[]; lede?: string }
+const { id, items, lede } = Astro.props;
+const isVideo = (src: string) => /\.(mp4|webm)(\?|$)/i.test(src);
+const hero = items[0];
+// captions that are just an export number ("4") say nothing — leave them out
+const cap = (c?: string) => (c && !/^[\s\d_.-]+$/.test(c) ? c : undefined);
+---
+<section class="section sect" id={id}>
+  <SectionHero id={id} lede={lede} media={hero ? { src: hero.src, alt: hero.caption } : undefined} />
+  <div class="sect__body">
+    <div class="gal" data-stagger>
+      {items.map((it, i) => (
+        <figure class="gal__item" style={`--i:${Math.min(i, 8)}`}>
+          <Media item={{ src: it.src, alt: it.caption }} colors={[]} client="" text="" class="gal__media" />
+          {(cap(it.caption) || isVideo(it.src)) && <figcaption class="gal__cap">{cap(it.caption)}{isVideo(it.src) && <span class="gal__tag">Video</span>}</figcaption>}
+        </figure>
+      ))}
+    </div>
+  </div>
+</section>

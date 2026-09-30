@@ -28,7 +28,7 @@ export function mapPayloadToProfile(doc: any, base: string): Profile {
     tagline: doc.tagline ?? undefined,
     updated: day(doc.updated) ?? day(doc.updatedAt),
     accent: doc.accent ?? undefined,
-    cover: { note: doc.coverNote ?? undefined },
+    cover: { note: doc.coverNote ?? undefined, background: url(doc.keyVisual, base) },
     downloadAllHref: url(doc.downloadAll, base),
 
     platform: (doc.platform ?? []).map((b: any) => ({ title: b.title, body: b.body })),
@@ -49,6 +49,7 @@ export function mapPayloadToProfile(doc: any, base: string): Profile {
       note: l.note ?? undefined,
       onDark: Boolean(l.onDark),
       image: url(l.image, base) ?? '',
+      transparent: Boolean(l.image?.transparent),
       files: files(l.files, base),
     })),
 
@@ -61,6 +62,16 @@ export function mapPayloadToProfile(doc: any, base: string): Profile {
       name: t.name, role: t.role ?? undefined, stack: t.stack, weights: t.weights ?? undefined,
       note: t.note ?? undefined, specimen: t.specimen ?? undefined, files: files(t.files, base),
     })),
+
+    applications: (doc.applications ?? [])
+      .map((a: any) => ({ src: url(a.image, base) ?? '', kind: a.kind ?? 'example', caption: a.caption ?? undefined }))
+      .filter((a: any) => a.src),
+    colorInUse: (doc.colorInUse ?? [])
+      .map((c: any) => ({ src: url(c.image, base) ?? '', caption: c.caption ?? undefined, colors: c.colors ?? undefined }))
+      .filter((c: any) => c.src),
+    graphics: (doc.graphics ?? [])
+      .map((g: any) => ({ src: url(g.image, base) ?? '', caption: g.caption ?? undefined }))
+      .filter((g: any) => g.src),
 
     imagery: {
       note: doc.imagery?.note ?? undefined,

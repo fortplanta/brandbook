@@ -20,13 +20,17 @@
    (`visibility` + `hideEmpty`) — see resolveStructure() below.
 
    `id` is the section's anchor + DOM id; `about` is the section hero's default
-   lede ("what goes here").
+   lede ("what goes here"). `missing` + `why` explain a section's value when a
+   client doesn't have it yet — greyed "Saknas" in the sidebar opens them in a
+   dialog, and the page placeholder shows the same argument.
    -------------------------------------------------------------------------- */
 export interface SectionDef {
   id: string;
   n: number;
   label: string;
   about: string;
+  missing?: string;    // noun phrase for "Det ser ut som att er brandbook saknar …" (empty-section dialog)
+  why?: string;        // why this section is worth having — shown when it's empty
   primary?: boolean;   // always visible in the sidebar; the rest sit behind "+ N till"
   inNav?: boolean;     // false = on the page, but not listed in the sidebar
 }
@@ -51,19 +55,37 @@ const raw: RawCategory[] = [
     intro: 'Grunden. Vem varumärket är, vad det tror på och hur det låter — allt annat vilar på det här.',
     groups: [
       { label: 'Grund', sections: [
-        { id: 'introduktion',   label: 'Introduktion',          about: 'Introduktion och hur dokumentet används.', primary: true },
-        { id: 'vision-mission', label: 'Vision & mission',      about: 'Varumärkets vision och mission.' },
-        { id: 'karnvarden',     label: 'Kärnvärden',            about: 'Kärnvärdena som styr hur varumärket agerar.', primary: true },
-        { id: 'manifest',       label: 'Manifest',              about: 'Varumärkets manifest.' },
-        { id: 'brand-story',    label: 'Brand story',           about: 'Ursprunget — varför varumärket finns.' },
+        { id: 'introduktion',   label: 'Introduktion',          about: 'Introduktion och hur dokumentet används.',
+          missing: 'en introduktion',
+          why: 'En kort introduktion förklarar vad dokumentet är till för, vem det är skrivet för och hur det ska användas — så att nya medarbetare, byråer och partners kommer rätt från första sidan i stället för att gissa.', primary: true },
+        { id: 'vision-mission', label: 'Vision & mission',      about: 'Varumärkets vision och mission.',
+          missing: 'en formulerad vision och mission',
+          why: 'Visionen beskriver vart ni är på väg, missionen vad ni gör varje dag för att komma dit. Tillsammans blir de måttstocken för varje beslut — från vilka projekt ni säger ja till, till hur ni pratar om er själva.' },
+        { id: 'karnvarden',     label: 'Kärnvärden',            about: 'Kärnvärdena som styr hur varumärket agerar.',
+          missing: 'kärnvärden',
+          why: 'Kärnvärden gör kulturen konkret. Tydligt formulerade — och förklarade med exempel — blir de ett stöd i rekrytering, prioriteringar och i hur varumärket beter sig när ingen riktlinje finns.', primary: true },
+        { id: 'manifest',       label: 'Manifest',              about: 'Varumärkets manifest.',
+          missing: 'ett manifest',
+          why: 'Ett manifest är varumärkets övertygelse i sin mest koncentrerade form — texten som samlar teamet och ger kampanjer, tal och presentationer en gemensam riktning.' },
+        { id: 'brand-story',    label: 'Brand story',           about: 'Ursprunget — varför varumärket finns.',
+          missing: 'en brand story',
+          why: 'Berättelsen om varför ni finns gör varumärket mänskligt och minnesvärt. Den ger grundare, säljare och kommunikatörer samma berättelse att utgå från — i stället för tio olika versioner.' },
       ] },
       { label: 'Marknad', sections: [
-        { id: 'positionering',  label: 'Positionering',         about: 'Marknadsläge, målgrupp och en kort konkurrensbild.', primary: true },
-        { id: 'malgrupper',     label: 'Målgrupper & personas', about: 'Målgrupper och personas, om relevant för kunden.' },
+        { id: 'positionering',  label: 'Positionering',         about: 'Marknadsläge, målgrupp och en kort konkurrensbild.',
+          missing: 'en positionering',
+          why: 'Positioneringen avgör var ni står i förhållande till konkurrenterna och för vem ni är det självklara valet. Utan den blir budskapen generiska och lätta att byta ut.', primary: true },
+        { id: 'malgrupper',     label: 'Målgrupper & personas', about: 'Målgrupper och personas, om relevant för kunden.',
+          missing: 'beskrivna målgrupper',
+          why: 'Tydliga målgrupper och personas gör att alla som skapar innehåll vet vem de pratar med — vilket skärper budskap, kanalval och prioriteringar.' },
       ] },
       { label: 'Personlighet & röst', sections: [
-        { id: 'personlighet',   label: 'Brand personality',     about: 'Varumärkets personlighet — arketyp(er).' },
-        { id: 'tonalitet',      label: 'Tonalitet & röst',      about: 'Tonalitet och röst, med do’s och don’ts i copy.', primary: true },
+        { id: 'personlighet',   label: 'Brand personality',     about: 'Varumärkets personlighet — arketyp(er).',
+          missing: 'en definierad personlighet',
+          why: 'En varumärkespersonlighet — ofta uttryckt som arketyper — gör att varumärket känns konsekvent, oavsett vem som skriver eller designar. Den är bryggan mellan strategi och uttryck.' },
+        { id: 'tonalitet',      label: 'Tonalitet & röst',      about: 'Tonalitet och röst, med do’s och don’ts i copy.',
+          missing: 'en tonalitet',
+          why: 'En tonalitet beskriver hur ni låter i text, med exempel på vad ni gör och inte gör. Den gör att allt från webbtexter till supportmejl känns som samma avsändare — och sparar tid i varje skrivuppdrag.', primary: true },
       ] },
     ],
   },
@@ -72,16 +94,32 @@ const raw: RawCategory[] = [
     intro: 'Det man ser. Logotyp, färg, typografi och bild — byggstenarna som gör varumärket igenkännbart.',
     groups: [
       { label: 'Grundelement', sections: [
-        { id: 'logos',            label: 'Logotyp',              about: 'Primär och sekundär logotyp, skyddszon, minsta storlek och felaktig användning.', primary: true },
-        { id: 'colors',           label: 'Färgpalett',           about: 'Primära och sekundära färger, tillgänglighetskontraster (WCAG) och värden för både digitalt och tryck.', primary: true },
-        { id: 'typography',       label: 'Typografi',            about: 'Primärt och sekundärt typsnitt, hierarki, webbfonter vs tryckfonter och fallbacks.', primary: true },
-        { id: 'layout-grid',      label: 'Layout & grid',        about: 'Gridsystem, marginaler och spacing-principer (spacing tokens är särskilt värdefullt digitalt).' },
+        { id: 'logos',            label: 'Logotyp',              about: 'Primär och sekundär logotyp, skyddszon, minsta storlek och felaktig användning.',
+          missing: 'logotypriktlinjer',
+          why: 'Riktlinjer för logotypen — varianter, frizon, minsta storlek och felaktig användning — skyddar det mest igenkännbara ni äger och gör att den ser rätt ut i varje sammanhang.', primary: true },
+        { id: 'colors',           label: 'Färgpalett',           about: 'Primära och sekundära färger, tillgänglighetskontraster (WCAG) och värden för både digitalt och tryck.',
+          missing: 'en definierad färgpalett',
+          why: 'En dokumenterad palett med exakta värden för skärm och tryck — och godkända kombinationer — ger ett enhetligt uttryck och säkerställer att text alltid är läsbar.', primary: true },
+        { id: 'typography',       label: 'Typografi',            about: 'Primärt och sekundärt typsnitt, hierarki, webbfonter vs tryckfonter och fallbacks.',
+          missing: 'typografiska riktlinjer',
+          why: 'Typsnitt, hierarki och fallbacks gör att allt material — från presentationer till webb — får samma rytm och läsbarhet, även när originaltypsnittet inte finns tillgängligt.', primary: true },
+        { id: 'layout-grid',      label: 'Layout & grid',        about: 'Gridsystem, marginaler och spacing-principer (spacing tokens är särskilt värdefullt digitalt).',
+          missing: 'riktlinjer för layout och grid',
+          why: 'Ett gridsystem och spacing-principer ger struktur och balans i allt från annonser till gränssnitt, och gör det snabbare att designa rätt från början.' },
       ] },
       { label: 'Bildvärld', sections: [
-        { id: 'imagery',          label: 'Bildspråk & fotostil', about: 'Ton, komposition, gör och gör inte.', primary: true },
-        { id: 'grafiska-element', label: 'Grafiska element',     about: 'Ikoner, mönster, texturer och dividers.' },
-        { id: 'ikonografi',       label: 'Ikonografi',           about: 'Ikonernas stil och vikt.' },
-        { id: 'illustration',     label: 'Illustrationsmanér',   about: 'Illustrationsmanér.' },
+        { id: 'imagery',          label: 'Bildspråk & fotostil', about: 'Ton, komposition, gör och gör inte.',
+          missing: 'ett definierat bildspråk',
+          why: 'Riktlinjer för bildspråk — ton, komposition, gör och gör inte — gör att fotografier och illustrationer känns som samma varumärke, oavsett vem som fotograferar eller köper in bilder.', primary: true },
+        { id: 'grafiska-element', label: 'Grafiska element',     about: 'Ikoner, mönster, texturer och dividers.',
+          missing: 'grafiska element',
+          why: 'Mönster, former och andra grafiska element ger varumärket ett eget formspråk utöver logotypen — ett sätt att vara igenkännbar även när logotypen inte syns.' },
+        { id: 'ikonografi',       label: 'Ikonografi',           about: 'Ikonernas stil och vikt.',
+          missing: 'riktlinjer för ikoner',
+          why: 'En gemensam ikonstil — linjevikt, hörn och storlekar — gör gränssnitt och material tydliga och sammanhållna, och sparar tid när nya ikoner behövs.' },
+        { id: 'illustration',     label: 'Illustrationsmanér',   about: 'Illustrationsmanér.',
+          missing: 'ett illustrationsmanér',
+          why: 'Ett definierat illustrationsmanér gör att illustrationer från olika illustratörer känns som samma familj och förstärker varumärkets personlighet.' },
       ] },
     ],
   },
@@ -90,11 +128,17 @@ const raw: RawCategory[] = [
     intro: 'Det som rör sig och hörs. Hur identiteten beter sig i tid — animation, video och ljud.',
     groups: [
       { label: 'Rörelse', sections: [
-        { id: 'motion', label: 'Rörlig identitet', about: 'Hur logotypen animeras, övergångar, hastighet och easing.', primary: true },
-        { id: 'video',  label: 'Video-guidelines', about: 'Intro/outro och undertextformat per kanal.', primary: true },
+        { id: 'motion', label: 'Rörlig identitet', about: 'Hur logotypen animeras, övergångar, hastighet och easing.',
+          missing: 'en rörlig identitet',
+          why: 'Riktlinjer för rörelse — hur logotypen animeras, övergångar, tempo och easing — gör att video, sociala medier och digitala produkter känns som samma varumärke i rörelse.', primary: true },
+        { id: 'video',  label: 'Video-guidelines', about: 'Intro/outro och undertextformat per kanal.',
+          missing: 'riktlinjer för video',
+          why: 'Mallar för intro och outro, undertexter och format per kanal gör att all video känns enhetlig och professionell — och går snabbare att producera.', primary: true },
       ] },
       { label: 'Ljud', sections: [
-        { id: 'ljud-id', label: 'Ljud-ID', about: 'Ljudlogotyp/jingel och användningsregler.', primary: true },
+        { id: 'ljud-id', label: 'Ljud-ID', about: 'Ljudlogotyp/jingel och användningsregler.',
+          missing: 'ett ljud-ID',
+          why: 'En ljudlogotyp och regler för ljud gör varumärket igenkännbart även utan bild — i reklam, poddar, appar och på event.', primary: true },
       ] },
     ],
   },
@@ -103,15 +147,25 @@ const raw: RawCategory[] = [
     intro: 'Identiteten i bruk. Hur byggstenarna möts på verkliga ytor — digitalt, i tryck och tillsammans med andra.',
     groups: [
       { label: 'Kanaler', sections: [
-        { id: 'digitalt', label: 'Digitala applikationer', about: 'Webb, sociala mallar, UI-komponenter, diagram och datavisualisering.', primary: true },
-        { id: 'print',    label: 'Print-applikationer',    about: 'Visitkort, brevpapper, roll-ups, materialspec m.m.', primary: true },
+        { id: 'digitalt', label: 'Digitala applikationer', about: 'Webb, sociala mallar, UI-komponenter, diagram och datavisualisering.',
+          missing: 'exempel på digitala tillämpningar',
+          why: 'Exempel på webb, sociala mallar och datavisualisering visar hur identiteten används i praktiken — det enklaste sättet att få nytt material att hamna rätt.', primary: true },
+        { id: 'print',    label: 'Print-applikationer',    about: 'Visitkort, brevpapper, roll-ups, materialspec m.m.',
+          missing: 'exempel på trycksaker',
+          why: 'Riktlinjer för visitkort, brevpapper och roll-ups — med materialspecar — säkerställer att tryckt material håller samma kvalitet varje gång, oavsett tryckeri.', primary: true },
       ] },
       { label: 'Partners & produkter', sections: [
-        { id: 'co-branding', label: 'Co-branding',             about: 'Regler för samexistens med partnerlogotyper.' },
-        { id: 'merch',       label: 'Profilprodukter & merch', about: 'Profilprodukter och merch.' },
+        { id: 'co-branding', label: 'Co-branding',             about: 'Regler för samexistens med partnerlogotyper.',
+          missing: 'regler för co-branding',
+          why: 'Regler för hur er logotyp samsas med partners skyddar varumärket i samarbeten och gör sponsor- och partnermaterial snabbare att godkänna.' },
+        { id: 'merch',       label: 'Profilprodukter & merch', about: 'Profilprodukter och merch.',
+          missing: 'riktlinjer för profilprodukter',
+          why: 'Riktlinjer för profilprodukter gör att allt från tygkassar till kläder håller rätt kvalitet och känns som en förlängning av varumärket.' },
       ] },
       { label: 'Inspiration', sections: [
-        { id: 'exempel', label: 'Exempel i verkligheten', about: 'Mockups som visar helheten i kontext.', primary: true },
+        { id: 'exempel', label: 'Exempel i verkligheten', about: 'Mockups som visar helheten i kontext.',
+          missing: 'exempel i verkligheten',
+          why: 'Mockups som visar helheten i verkliga miljöer gör identiteten konkret — de inspirerar och fungerar som referens när nytt material tas fram.', primary: true },
       ] },
     ],
   },
@@ -120,11 +174,17 @@ const raw: RawCategory[] = [
     intro: 'Allt som behövs för att använda varumärket rätt — filer, ansvar och historik.',
     groups: [
       { label: 'Filer', sections: [
-        { id: 'downloads', label: 'Nedladdningsbara assets', about: 'Logotyppaket, fontlänkar och mallar.', primary: true },
+        { id: 'downloads', label: 'Nedladdningsbara assets', about: 'Logotyppaket, fontlänkar och mallar.',
+          missing: 'nedladdningsbara filer',
+          why: 'Samlade, uppdaterade filer — logotyper, typsnitt och mallar — gör att alla använder rätt version, i stället för gamla filer från någons inkorg.', primary: true },
       ] },
       { label: 'Förvaltning', sections: [
-        { id: 'kontakt',          label: 'Kontakt & godkännande', about: 'Vem som äger varumärket och hur nya assets begärs.', primary: true },
-        { id: 'versionshistorik', label: 'Versionshistorik',      about: 'Uppdateringslogg — ett digitalt mervärde som en PDF inte kan erbjuda.', inNav: false },
+        { id: 'kontakt',          label: 'Kontakt & godkännande', about: 'Vem som äger varumärket och hur nya assets begärs.',
+          missing: 'kontaktvägar och en godkännandeprocess',
+          why: 'Tydligt ägarskap och en enkel process för godkännanden gör att frågor får svar snabbt — och att varumärket förvaltas i stället för att glida isär.', primary: true },
+        { id: 'versionshistorik', label: 'Versionshistorik',      about: 'Uppdateringslogg — ett digitalt mervärde som en PDF inte kan erbjuda.',
+          missing: 'en versionshistorik',
+          why: 'En logg över ändringar visar att brandbooken lever: alla ser vad som har uppdaterats och när — något en PDF aldrig kan erbjuda.', inNav: false },
       ] },
     ],
   },

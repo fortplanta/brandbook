@@ -31,21 +31,51 @@ export interface LogoAnimation {
   artboard?: string; stateMachine?: string; numberInput?: string; triggers?: string[];
   renderer?: 'svg' | 'canvas'; segments?: [number, number][];
 }
-interface LogoFrame { index: string; title: string; bodyCopy: string; logoVariantId: string; }
-interface Props { animation?: LogoAnimation; }
-const { animation } = Astro.props;
+import type { Logo } from '../../content/profile';
 
-const frames: LogoFrame[] = [
-  { index: '01', title: 'Primär logotyp',  bodyCopy: 'Wordmark och symbol i lås. Förstahandsval i all kommunikation. Ändra aldrig proportioner eller färg.', logoVariantId: 'primary' },
-  { index: '02', title: 'Symbol',           bodyCopy: 'Märket ensamt — för app-ikoner, favicons och små ytor. Inte en självständig avsändare i extern kommunikation.', logoVariantId: 'symbol' },
-  { index: '03', title: 'Stående variant',  bodyCopy: 'Symbol över wordmark. För smala format och sociala profiler där den liggande lockupen blir för liten.', logoVariantId: 'stacked' },
-  { index: '04', title: 'Monokrom',         bodyCopy: 'En färg. För tryck i en pantone, gravyr, eller när underlaget inte tillåter full färg.', logoVariantId: 'mono' },
-  { index: '05', title: 'Negativ',          bodyCopy: 'På mörk eller färgstark bakgrund. Använd den negativa versionen — aldrig den positiva urklippt.', logoVariantId: 'inverse' },
-  { index: '06', title: 'Frizon',           bodyCopy: 'Håll fri yta runt logotypen — minst symbolens höjd på alla sidor. Låt den andas.', logoVariantId: 'clearspace' },
+interface LogoFrame { id: string; title: string; body: string; kind: 'image' | 'video' | 'mono' | 'inverse' | 'clearspace'; src: string; dark?: boolean; }
+interface Props { logos: Logo[]; animation?: LogoAnimation; }
+const { logos = [], animation } = Astro.props;
+
+/* The frames come from the client's own logos (profile / CMS):
+     1. one frame per logo — its name and note (generic names like "Logotyp",
+        from lazily named files, fall back to titles by position)
+     2. guideline frames generated from the primary logo, when it's a vector or
+        a known-transparent image (can be recoloured with a filter): Monokrom, Negativ
+        (unless the client has its own on-dark logo), Frizon
+     3. a logo animation (a video filed as a logo) → "I rörelse"               */
+const isVideo = (src = '') => /\.(mp4|webm)(\?|$)/i.test(src);
+// only a vector or a KNOWN transparent image can be recoloured by filter —
+// an opaque PNG (a logo on a coloured card) would turn into a black rectangle
+const recolourable = (l: Logo) => /\.svg(\?|$)/i.test(l.image) || l.transparent === true;
+const GENERIC = /^(logo|logotyp|logotype|logga)$/i;
+const POSITION_TITLES = ['Primär logotyp', 'Sekundär logotyp', 'Tredje variant', 'Fjärde variant'];
+const POSITION_BODIES = [
+  'Förstahandsval i all kommunikation. Ändra aldrig proportioner eller färg.',
+  'För format där den primära logotypen inte får plats eller inte fungerar.',
 ];
 
-const variantOrder = ['primary', 'symbol', 'stacked', 'mono', 'inverse', 'clearspace'];
-const total = String(frames.length).padStart(2, '0');
+const stills = logos.filter((l) => l.image && !isVideo(l.image));
+const motion = logos.filter((l) => isVideo(l.image));
+const primary = stills[0];
+const frames: LogoFrame[] = stills.map((l, i) => ({
+  id: `logo-${i}`, kind: 'image', src: l.image, dark: l.onDark,
+  title: l.name && !GENERIC.test(l.name.trim()) ? l.name : (POSITION_TITLES[i] ?? `Variant ${i + 1}`),
+  body: l.note || POSITION_BODIES[i] || '',
+}));
+if (primary && recolourable(primary)) {
+  frames.push({ id: 'mono', kind: 'mono', src: primary.image, title: 'Monokrom', body: 'En färg. För tryck i en pantone, gravyr, eller när underlaget inte tillåter full färg.' });
+  if (!stills.some((l) => l.onDark)) frames.push({ id: 'inverse', kind: 'inverse', src: primary.image, dark: true, title: 'Negativ', body: 'På mörk eller färgstark bakgrund. Använd den negativa versionen — aldrig den positiva urklippt.' });
+}
+if (primary) frames.push({ id: 'clearspace', kind: 'clearspace', src: primary.image, title: 'Frizon', body: 'Håll fri yta runt logotypen — minst symbolens höjd på alla sidor. Låt den andas.' });
+motion.forEach((l, i) => frames.push({
+  id: `motion-${i}`, kind: 'video', src: l.image,
+  title: l.name && !GENERIC.test(l.name.trim()) ? l.name : 'I rörelse',
+  body: l.note || 'Så rör sig logotypen — i intron till filmer, på skärmar och i digitala kanaler.',
+}));
+
+const pad = (n: number) => String(n).padStart(2, '0');
+const total = pad(frames.length);
 ---
 <section class="lt-chapter" id="logos" aria-label="Logotyper" data-lt-chapter>
   <slot name="hero" /><!-- the shared section hero (SectionHero), passed in from the page -->
@@ -53,49 +83,36 @@ const total = String(frames.length).padStart(2, '0');
     <!-- LEFT — REAL scrolling frames -->
     <div class="lt-frames">
       {frames.map((f, i) => (
-        <article class:list={['lt-frame', i === 0 && 'is-current']} data-lt-frame data-index={i} data-variant={f.logoVariantId}>
+        <article class:list={['lt-frame', i === 0 && 'is-current']} data-lt-frame data-index={i} data-variant={f.id}>
           <div class="lt-frame__inner">
-            <span class="lt-frame__idx">{f.index} <span>/ {total}</span></span>
+            <span class="lt-frame__idx">{pad(i + 1)} <span>/ {total}</span></span>
             <h2 class="lt-frame__title">{f.title}</h2>
-            <p class="lt-frame__body">{f.bodyCopy}</p>
+            {f.body && <p class="lt-frame__body">{f.body}</p>}
           </div>
         </article>
       ))}
     </div>
 
-    <!-- RIGHT — pinned logo, morphs to the active frame's variant -->
+    <!-- RIGHT — pinned logo, switches to the active frame's variant -->
     <div class="lt-logo-rail" aria-hidden="true">
       <div class="lt-logo-sticky">
         <div class="lt-logo-media" data-lt-logo-media>
           {/* Rich animation mounts — rendered only when a client supplies one.
-              The driver reveals the right one and hides the SVG stack; on any
-              failure it stays hidden and the SVG stack shows. */}
+              The driver reveals the right one and hides the fallback stack; on
+              any failure it stays hidden and the stack shows. */}
           {animation?.type === 'rive' && <canvas class="lt-rive" data-lt-rive></canvas>}
           {animation?.type === 'lottie' && <div class="lt-lottie" data-lt-lottie></div>}
           {animation && <script type="application/json" data-lt-anim set:html={JSON.stringify(animation)} />}
 
-          <!-- Always-present SVG fallback -->
+          <!-- Always-present stack: one visual per frame, from the client's files -->
           <div class="lt-logo-stack" data-lt-fallback>
-          {variantOrder.map((id, i) => (
-            <div class:list={['lt-logo', i === 0 && 'is-active']} data-variant={id}>
-              {id === 'primary' && (
-                <svg viewBox="0 0 340 90" class="lt-svg"><g fill="var(--lt-brand)"><rect x="4" y="46" width="9" height="34" rx="2"/><rect x="17" y="34" width="9" height="46" rx="2"/><rect x="30" y="22" width="9" height="58" rx="2"/><rect x="43" y="10" width="9" height="70" rx="2"/></g><text x="66" y="48" font-family="var(--lt-font)" font-size="30" font-weight="700" fill="var(--lt-ink)">Tangent</text><text x="66" y="74" font-family="var(--lt-font)" font-size="19" font-weight="400" fill="var(--lt-brand)">Technologies</text></svg>
-              )}
-              {id === 'symbol' && (
-                <svg viewBox="0 0 120 120" class="lt-svg"><g fill="var(--lt-brand)"><rect x="18" y="70" width="14" height="32" rx="3"/><rect x="39" y="52" width="14" height="50" rx="3"/><rect x="60" y="34" width="14" height="68" rx="3"/><rect x="81" y="16" width="14" height="86" rx="3"/></g></svg>
-              )}
-              {id === 'stacked' && (
-                <svg viewBox="0 0 200 150" class="lt-svg"><g fill="var(--lt-brand)"><rect x="72" y="40" width="10" height="24" rx="2"/><rect x="87" y="28" width="10" height="36" rx="2"/><rect x="102" y="16" width="10" height="48" rx="2"/><rect x="117" y="4" width="10" height="60" rx="2"/></g><text x="100" y="104" text-anchor="middle" font-family="var(--lt-font)" font-size="30" font-weight="700" fill="var(--lt-ink)">Tangent</text><text x="100" y="130" text-anchor="middle" font-family="var(--lt-font)" font-size="15" font-weight="400" letter-spacing="2" fill="var(--lt-brand)">TECHNOLOGIES</text></svg>
-              )}
-              {id === 'mono' && (
-                <svg viewBox="0 0 340 90" class="lt-svg"><g fill="var(--lt-ink)"><rect x="4" y="46" width="9" height="34" rx="2"/><rect x="17" y="34" width="9" height="46" rx="2"/><rect x="30" y="22" width="9" height="58" rx="2"/><rect x="43" y="10" width="9" height="70" rx="2"/></g><text x="66" y="48" font-family="var(--lt-font)" font-size="30" font-weight="700" fill="var(--lt-ink)">Tangent</text><text x="66" y="74" font-family="var(--lt-font)" font-size="19" font-weight="400" fill="var(--lt-ink)">Technologies</text></svg>
-              )}
-              {id === 'inverse' && (
-                <svg viewBox="0 0 340 90" class="lt-svg"><g fill="#fff"><rect x="4" y="46" width="9" height="34" rx="2"/><rect x="17" y="34" width="9" height="46" rx="2"/><rect x="30" y="22" width="9" height="58" rx="2"/><rect x="43" y="10" width="9" height="70" rx="2"/></g><text x="66" y="48" font-family="var(--lt-font)" font-size="30" font-weight="700" fill="#fff">Tangent</text><text x="66" y="74" font-family="var(--lt-font)" font-size="19" font-weight="400" fill="#fff">Technologies</text></svg>
-              )}
-              {id === 'clearspace' && (
-                <svg viewBox="0 0 200 160" class="lt-svg"><rect x="20" y="20" width="160" height="120" fill="none" stroke="var(--lt-muted)" stroke-width="1.5" stroke-dasharray="6 6"/><g fill="var(--lt-brand)"><rect x="70" y="86" width="12" height="28" rx="3"/><rect x="88" y="70" width="12" height="44" rx="3"/><rect x="106" y="54" width="12" height="60" rx="3"/><rect x="124" y="38" width="12" height="76" rx="3"/></g></svg>
-              )}
+          {frames.map((f, i) => (
+            <div class:list={['lt-logo', i === 0 && 'is-active', `lt-logo--${f.kind}`, f.dark && 'lt-logo--dark']} data-variant={f.id}>
+              {f.kind === 'video'
+                ? <video class="lt-img" src={f.src} autoplay muted loop playsinline preload="metadata"></video>
+                : f.kind === 'clearspace'
+                  ? <span class="lt-clear"><img class="lt-img" src={f.src} alt="" loading="lazy" /></span>
+                  : <img class="lt-img" src={f.src} alt="" loading="lazy" />}
             </div>
           ))}
           </div>
@@ -185,8 +202,13 @@ const total = String(frames.length).padStart(2, '0');
     transition: opacity 200ms ease, transform 260ms cubic-bezier(0.16,1,0.3,1); will-change: opacity, transform;
   }
   .lt-logo.is-active { opacity: 1; transform: none; }
-  .lt-logo .lt-svg { width: 100%; height: auto; max-height: 100%; }
-  .lt-logo[data-variant="inverse"] { background: var(--lt-ink); border-radius: 18px; padding: 12%; }
+  .lt-img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .lt-logo--dark { background: var(--lt-ink); border-radius: 18px; padding: 12%; }
+  /* generated variants: recoloured with filters (vector / transparent logos only) */
+  .lt-logo--mono .lt-img { filter: grayscale(1) brightness(0); }
+  .lt-logo--inverse .lt-img { filter: grayscale(1) brightness(0) invert(1); }
+  .lt-logo--video .lt-img { object-fit: cover; border-radius: 12px; }
+  .lt-clear { display: grid; place-items: center; width: 86%; height: 78%; padding: 14%; border: 1.5px dashed var(--lt-muted); }
 
   .lt-ticks { position: absolute; right: clamp(1rem,3vw,2rem); top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.6rem; }
   .lt-tick { width: 7px; height: 7px; border-radius: 50%; background: var(--lt-ink); opacity: 0.22; transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16,1,0.3,1); }

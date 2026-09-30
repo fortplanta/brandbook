@@ -4,8 +4,10 @@
    `hideEmpty` in profile.ts). */
 import SectionHero from '../SectionHero.astro';
 import { t } from '../../lib/strings';
+import { sectionById } from '../../content/categories';
 interface Props { id: string; }
 const { id } = Astro.props;
+const def = sectionById.get(id);
 ---
 <section class="section sect section--empty" id={id}>
   <SectionHero id={id} />
@@ -13,7 +15,8 @@ const { id } = Astro.props;
   <div class="wrap">
     <div class="placeholder" data-reveal>
       <span class="placeholder__tag">{t.placeholder.tag}</span>
-      <p class="placeholder__about">Sektionen ingår i mallen men har inget innehåll ännu.</p>
+      {def?.missing && <p class="placeholder__lead">{t.empty.lead} {def.missing}.</p>}
+      <p class="placeholder__about">{def?.why ?? 'Sektionen ingår i mallen men har inget innehåll ännu.'}</p>
     </div>
   </div>
 </div>

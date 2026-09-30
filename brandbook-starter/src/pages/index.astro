@@ -34,6 +34,7 @@ import Print from '../components/sections/Print.astro';
 import CoBranding from '../components/sections/CoBranding.astro';
 import Merch from '../components/sections/Merch.astro';
 import Exempel from '../components/sections/Exempel.astro';
+import MediaSection from '../components/sections/MediaSection.astro';
 // V. Resurser & governance
 import Downloads from '../components/sections/Downloads.astro';
 import Kontakt from '../components/sections/Kontakt.astro';
@@ -47,15 +48,28 @@ const profile = await loadProfile();
 // Sections backed by client content. Sections not listed here have no content
 // model yet — they're filled once their component is built (they render the
 // placeholder until then).
+// Applications (from the CMS drop zone) by kind → the Tillämpning sections.
+// Signage/environment has no section of its own; it joins "Exempel i verkligheten".
+const apps = (...kinds: string[]) => (profile.applications ?? []).filter((a) => kinds.includes(a.kind));
+const isVideo = (src?: string) => !!src && /\.(mp4|webm)(\?|$)/i.test(src);
+// A logo animation (a video filed under Logotyp) becomes the logo section's hero.
+const logoVideo = profile.logos?.find((l) => isVideo(l.image));
+const logoStill = profile.logos?.find((l) => l.image && !isVideo(l.image));
+
 const has: Record<string, boolean> = {
   positionering: (profile.platform?.length ?? 0) > 0,
   tonalitet: (profile.tone?.principles?.length ?? 0) > 0,
   logos: profile.logos?.length > 0,
-  colors: profile.colors?.length > 0,
+  colors: profile.colors?.length > 0 || (profile.colorInUse?.length ?? 0) > 0,
   typography: profile.typography?.length > 0,
   imagery: (profile.imagery?.images?.length ?? 0) > 0,
   motion: profile.motion?.length > 0,
   downloads: profile.downloads?.length > 0,
+  'grafiska-element': (profile.graphics?.length ?? 0) > 0,
+  digitalt: apps('digital').length > 0,
+  print: apps('print').length > 0,
+  merch: apps('merch').length > 0,
+  exempel: apps('environment', 'example').length > 0,
   versionshistorik: (profile.changelog?.length ?? 0) > 0,
 };
 
@@ -83,6 +97,8 @@ const nav = structure.map((cat) => {
     items: cat.sections.map((s) => ({
       id: s.id, label: s.label, locked: s.locked,
       primary: primary.has(s.id), hidden: s.inNav === false,
+      // no content yet → greyed "Saknas" in the sidebar; opens the why-dialog
+      empty: !s.filled && !s.locked,
     })),
   };
 });
@@ -110,8 +126,15 @@ const chapters = structure
   <Cover client={profile.client} tagline={profile.tagline} note={profile.cover?.note} background={profile.cover?.background} />
 
   {chapters.map(({ cat, sections }) => (
-    <>
+    <div class="catwrap" data-catwrap={cat.id}>
       <CategoryHero category={cat} colors={profile.colors} downloads={profile.downloads} changelog={profile.changelog} />
+      {/* "You are here": a zero-height sticky anchor right after the chapter hero.
+          Its pill rides up with the page, sticks top-left while this category's
+          pages scroll by, and is pushed out when the wrapper ends — where the
+          next category's pill takes over. Pure CSS (position: sticky). */}
+      <div class="catstick" aria-hidden="true">
+        <a class="catpill" href={`#kapitel-${cat.id}`} tabindex="-1"><span class="catpill__num">{cat.roman}</span>{cat.label}</a>
+      </div>
       {sections.map(({ id, filled }) => (
       <>
         {/* I. Varumärkesplattform */}
@@ -126,15 +149,15 @@ const chapters = structure
         {id === 'malgrupper' && <Malgrupper />}
         {/* II. Visuell identitet */}
         {id === 'logos' && (filled ? (
-        <LogotypesSection>
-          <SectionHero slot="hero" id="logos">
-            <div class="shero-logo" slot="fallback"><img src={profile.logos[0].image} alt="" /></div>
+        <LogotypesSection logos={profile.logos}>
+          <SectionHero slot="hero" id="logos" media={logoVideo ? { src: logoVideo.image } : undefined}>
+            <div class="shero-logo" slot="fallback"><img src={logoStill?.image ?? profile.logos[0].image} alt="" /></div>
           </SectionHero>
         </LogotypesSection>
       ) : <Placeholder id={id} />)}
-        {id === 'colors' && (filled ? <Colors colors={profile.colors} typography={profile.typography} guide={profile.colorGuide} client={profile.client} text={posterText} /> : <Placeholder id={id} />)}
+        {id === 'colors' && (filled ? <Colors colors={profile.colors} typography={profile.typography} guide={profile.colorGuide} colorInUse={profile.colorInUse} client={profile.client} text={posterText} /> : <Placeholder id={id} />)}
         {id === 'typography' && (filled ? <Typography typography={profile.typography} /> : <Placeholder id={id} />)}
-        {id === 'grafiska-element' && <GrafiskaElement />}
+        {id === 'grafiska-element' && (filled ? <MediaSection id={id} items={profile.graphics ?? []} /> : <GrafiskaElement />)}
         {id === 'imagery' && (filled ? <Imagery note={profile.imagery.note} images={profile.imagery.images} /> : <Placeholder id={id} />)}
         {id === 'layout-grid' && <LayoutGrid />}
         {id === 'ikonografi' && <Ikonografi />}
@@ -144,17 +167,17 @@ const chapters = structure
         {id === 'video' && <Video />}
         {id === 'ljud-id' && <LjudId />}
         {/* IV. Tillämpning */}
-        {id === 'digitalt' && <Digitalt />}
-        {id === 'print' && <Print />}
+        {id === 'digitalt' && (filled ? <MediaSection id={id} items={apps('digital')} /> : <Digitalt />)}
+        {id === 'print' && (filled ? <MediaSection id={id} items={apps('print')} /> : <Print />)}
         {id === 'co-branding' && <CoBranding />}
-        {id === 'merch' && <Merch />}
-        {id === 'exempel' && <Exempel />}
+        {id === 'merch' && (filled ? <MediaSection id={id} items={apps('merch')} /> : <Merch />)}
+        {id === 'exempel' && (filled ? <MediaSection id={id} items={apps('environment', 'example')} /> : <Exempel />)}
         {/* V. Resurser & governance */}
         {id === 'downloads' && (filled ? <Downloads downloads={profile.downloads} downloadAllHref={profile.downloadAllHref} /> : <Placeholder id={id} />)}
         {id === 'kontakt' && <Kontakt />}
         {id === 'versionshistorik' && (filled ? <Versionshistorik changelog={profile.changelog ?? []} /> : <Placeholder id={id} />)}
       </>
       ))}
-    </>
+    </div>
   ))}
 </BrandbookLayout>

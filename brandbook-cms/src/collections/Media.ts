@@ -24,8 +24,22 @@ export const Media: CollectionConfig = {
     ],
   },
   access: { read: anyoneRead, create: authenticated, update: authenticated, delete: isAdmin },
-  admin: { useAsTitle: 'filename' },
+  admin: { useAsTitle: 'filename', defaultColumns: ['filename', 'category', 'paletteColors', 'autoTagged', 'updatedAt'] },
   fields: [
     { name: 'alt', type: 'text', admin: { description: 'Alt text / caption for images.' } },
+    // Filled by the drop zone's local image analysis (src/ingest/vision.js).
+    {
+      name: 'category', type: 'select', admin: { position: 'sidebar', description: 'Detected on ingest — editable.' },
+      options: [
+        { label: 'Key visual', value: 'keyvisual' }, { label: 'Rörligt (film)', value: 'motion' },
+        { label: 'Logotyp', value: 'logo' }, { label: 'Färg i bruk', value: 'color' },
+        { label: 'Digitalt', value: 'digital' }, { label: 'Print', value: 'print' },
+        { label: 'Miljö', value: 'environment' }, { label: 'Profilprodukter', value: 'merch' },
+        { label: 'Grafiska element', value: 'graphics' }, { label: 'Bildspråk (foto)', value: 'photo' },
+      ],
+    },
+    { name: 'paletteColors', type: 'text', admin: { position: 'sidebar', description: 'Client palette colours found in the image.' } },
+    { name: 'transparent', type: 'checkbox', admin: { position: 'sidebar', readOnly: true, description: 'Has a transparent background (measured on ingest) — lets the site generate mono/negative logo variants.' } },
+    { name: 'autoTagged', type: 'checkbox', admin: { position: 'sidebar', readOnly: true, description: 'Categorised by the ingest analysis (not by hand).' } },
   ],
 }

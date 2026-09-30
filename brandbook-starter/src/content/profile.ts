@@ -16,6 +16,7 @@ export interface DownloadFile { label: string; href: string; size?: string; }
 
 export interface Logo {
   name: string; note?: string; onDark?: boolean; image: string; files: DownloadFile[];
+  transparent?: boolean;   // transparent background (from the CMS) — can be recoloured (mono/negative)
 }
 /* 11 Färgpalett — the colour guide. Colours are defined once in `colors`; the
    guide references them BY NAME (or a raw hex) and adds the structure: palettes,
@@ -69,6 +70,13 @@ export interface PlatformBlock { title: string; body: string; }
 export interface TonePrinciple { name: string; description: string; do?: string; dont?: string; }
 export interface Tone { intro?: string; principles: TonePrinciple[]; boilerplate?: string; }
 
+/* Filled from the CMS drop zone (image analysis): mockups by kind, palette
+   artwork, graphic elements. Local profiles can use them too. */
+export type ApplicationKind = 'digital' | 'print' | 'environment' | 'merch' | 'example';
+export interface Application { src: string; kind: ApplicationKind; caption?: string }
+export interface ColorInUseItem { src: string; caption?: string; colors?: string }
+export interface GraphicItem { src: string; caption?: string }
+
 export interface Profile {
   client: string;
   tagline?: string;
@@ -85,6 +93,9 @@ export interface Profile {
   typography: Typeface[];
   imagery: { note?: string; images: ImageItem[] };
   motion: MotionItem[];
+  applications?: Application[];   // 21–25 Tillämpning (by kind)
+  colorInUse?: ColorInUseItem[];   // 11 — the palette in use (feeds the colour section)
+  graphics?: GraphicItem[];        // 15 Grafiska element
   downloads: DownloadGroup[];
   changelog?: ChangeEntry[];      // optional; shows a "living document" history
 

@@ -16,6 +16,10 @@ export const TARGETS = {
   logos: { label: 'Logos' },
   typography: { label: 'Typography' },
   imagery: { label: 'Imagery' },
+  keyVisual: { label: 'Key visual' },
+  colorInUse: { label: 'Färg i bruk' },
+  applications: { label: 'Tillämpning' },
+  graphics: { label: 'Grafiska element' },
   motion: { label: 'Motion' },
   downloads: { label: 'Downloads' },
   downloadAll: { label: 'Download-all ZIP' },
@@ -122,7 +126,9 @@ function classifyFile(name, mime = '') {
     return { kind: 'font', target: 'typography', confidence: 'high', data: { file: name, mime, ...fontFromFilename(name) } };
   }
   if (is('mp4', 'webm', 'mov', 'm4v') || /^video\//.test(mime)) {
-    return { kind: 'motion', target: 'motion', confidence: 'high', data: { file: name, mime, title: titleCase(baseName(name)) } };
+    // Provisional: motion. `analyze` + `video` ask the drop zone to look at a few
+    // frames — a video can just as well be a logo animation or an application.
+    return { kind: 'motion', target: 'motion', confidence: 'med', data: { file: name, mime, title: titleCase(baseName(name)), analyze: true, video: true } };
   }
   if (is('svg')) {
     // SVGs are usually marks; a name that screams photo overrides.
@@ -132,10 +138,11 @@ function classifyFile(name, mime = '') {
       : { kind: 'image', target: 'imagery', confidence: 'med', data: { file: name, mime, caption: titleCase(baseName(name)) } };
   }
   if (is('png', 'jpg', 'jpeg', 'webp', 'gif', 'avif') || /^image\//.test(mime)) {
-    // Raster is usually imagery; a "logo" in the name reroutes to logos.
+    // Raster: a provisional guess from the name. `analyze` asks the drop zone to
+    // look at the pixels (src/ingest/vision.js) — the name is often "img2.png".
     return LOGO_HINT.test(name)
-      ? { kind: 'logo', target: 'logos', confidence: 'med', data: { file: name, mime, name: titleCase(baseName(name)) } }
-      : { kind: 'image', target: 'imagery', confidence: 'high', data: { file: name, mime, caption: titleCase(baseName(name)) } };
+      ? { kind: 'logo', target: 'logos', confidence: 'med', data: { file: name, mime, name: titleCase(baseName(name)), analyze: true } }
+      : { kind: 'image', target: 'imagery', confidence: 'med', data: { file: name, mime, caption: titleCase(baseName(name)), analyze: true } };
   }
   if (is('zip')) {
     return ALL_HINT.test(name)

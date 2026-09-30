@@ -13,6 +13,7 @@
     "generate:importmap": "payload generate:importmap"
   },
   "dependencies": {
+    "@huggingface/transformers": "^4.3.0",
     "@next/env": "^15.5.0",
     "@payloadcms/db-sqlite": "^3.89.0",
     "@payloadcms/next": "^3.89.0",
@@ -30,5 +31,7 @@
     "tsx": "^4.23.13",
     "typescript": "^5.7.0"
   },
-  "engines": { "node": ">=20.9.0" }
+  "engines": {
+    "node": ">=20.9.0"
+  }
 }

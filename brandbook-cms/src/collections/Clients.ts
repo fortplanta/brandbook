@@ -38,6 +38,7 @@ export const Clients: CollectionConfig = {
       ],
     },
     { name: 'coverNote', type: 'textarea', admin: { description: 'Intro paragraph on the cover.' } },
+    { name: 'keyVisual', type: 'upload', relationTo: 'media', label: 'Key visual', admin: { description: 'The brandbook hero — an image or a video (MP4/WebM). Also settable from the drop zone (key 0).' } },
     { name: 'downloadAll', type: 'upload', relationTo: 'media', admin: { description: 'The single "download everything" ZIP.' } },
 
     {
@@ -151,6 +152,23 @@ export const Clients: CollectionConfig = {
               ],
             },
             {
+              name: 'colorInUse', type: 'array', label: 'Färg i bruk',
+              admin: { description: 'Artwork that shows the palette in use (posters, colour layouts). Auto-filled by the drop zone; the detected palette colours are noted per image.' },
+              fields: [
+                { name: 'image', type: 'upload', relationTo: 'media', required: true },
+                { name: 'caption', type: 'text' },
+                { name: 'colors', type: 'text', admin: { description: 'Palette colours detected in the image, e.g. "Signal, Navy".' } },
+              ],
+            },
+            {
+              name: 'graphics', type: 'array', label: 'Grafiska element',
+              admin: { description: 'Icons, patterns, textures.' },
+              fields: [
+                { name: 'image', type: 'upload', relationTo: 'media', required: true },
+                { name: 'caption', type: 'text' },
+              ],
+            },
+            {
               name: 'motion', type: 'array',
               admin: { description: 'Video. Leave empty and the Rörligt section disappears.' },
               fields: [
@@ -158,6 +176,29 @@ export const Clients: CollectionConfig = {
                 { name: 'note', type: 'text' },
                 { name: 'src', type: 'upload', relationTo: 'media', required: true },
                 { name: 'poster', type: 'upload', relationTo: 'media' },
+              ],
+            },
+          ],
+        },
+        {
+          label: 'Tillämpning',
+          fields: [
+            {
+              name: 'applications', type: 'array', label: 'Tillämpningar',
+              admin: { description: 'Mockups and real-world examples. Auto-filled and sorted by kind by the drop zone.' },
+              fields: [
+                { name: 'image', type: 'upload', relationTo: 'media', required: true },
+                {
+                  name: 'kind', type: 'select', required: true, defaultValue: 'example',
+                  options: [
+                    { label: 'Digitalt', value: 'digital' },
+                    { label: 'Print', value: 'print' },
+                    { label: 'Miljö / skyltning', value: 'environment' },
+                    { label: 'Profilprodukter', value: 'merch' },
+                    { label: 'Exempel', value: 'example' },
+                  ],
+                },
+                { name: 'caption', type: 'text' },
               ],
             },
           ],
